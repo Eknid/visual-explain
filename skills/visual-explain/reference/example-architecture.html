@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Hub Map</title>
+<style>
+:root{
+  --bg:#f6f7fb; --card:#ffffff; --ink:#1d2433; --mute:#6b7385; --line:#c9cfdb;
+  --gh:#2f6fed; --hub:#7a4de8; --scion:#0f9d8a; --plan:#e8912d; --dev:#2f6fed; --rev:#d0417b;
+  --human:#5a6478; --db:#8a6d3b; --obs:#e0533d;
+  --gh-s:#e6eefe; --hub-s:#efe8fd; --scion-s:#e1f5f2; --plan-s:#fdf0e1; --dev-s:#e6eefe; --rev-s:#fbe6ee; --human-s:#eceef3; --db-s:#f4ede1; --obs-s:#fce9e6;
+--py:#3776ab; --llm:#8b5cf6; --cl:#64748b; --zc:#eef2f8; --zm:#f3f5f9; --zd:#e7f6f3;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12151c; --card:#1b202b; --ink:#e7eaf1; --mute:#9aa3b5; --line:#3a4254;
+  --gh:#6d9bff; --hub:#a88bff; --scion:#3fcfb8; --plan:#f2ab55; --dev:#6d9bff; --rev:#f06d9f;
+  --human:#a3adc2; --db:#c9a56a; --obs:#ff7a63;
+  --gh-s:#1e2a45; --hub-s:#2a2342; --scion-s:#15332f; --plan-s:#3a2b18; --dev-s:#1e2a45; --rev-s:#3b1f2b; --human-s:#262c38; --db-s:#332a1c; --obs-s:#3a211d;
+  --py:#6aa6e0; --llm:#b197fc; --cl:#94a3b8; --zc:#182030; --zm:#161a23; --zd:#132824;
+}}
+:root[data-theme="dark"]{
+  --bg:#12151c; --card:#1b202b; --ink:#e7eaf1; --mute:#9aa3b5; --line:#3a4254;
+  --gh:#6d9bff; --hub:#a88bff; --scion:#3fcfb8; --plan:#f2ab55; --dev:#6d9bff; --rev:#f06d9f;
+  --human:#a3adc2; --db:#c9a56a; --obs:#ff7a63;
+  --gh-s:#1e2a45; --hub-s:#2a2342; --scion-s:#15332f; --plan-s:#3a2b18; --dev-s:#1e2a45; --rev-s:#3b1f2b; --human-s:#262c38; --db-s:#332a1c; --obs-s:#3a211d;
+  --py:#6aa6e0; --llm:#b197fc; --cl:#94a3b8; --zc:#182030; --zm:#161a23; --zd:#132824;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:30px;margin:8px 0 4px}
+.sub{color:var(--mute);margin:0 0 28px}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+nav a{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 14px;color:var(--ink);text-decoration:none;font-weight:600;font-size:14px}
+section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin-bottom:24px}
+h2{font-size:20px;margin:0 0 14px;display:flex;align-items:center;gap:10px}
+h2 .n{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--card);font-size:15px}
+svg{width:100%;height:auto;display:block}
+svg text{fill:var(--ink);font-family:inherit}
+.mute{fill:var(--mute)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px;font-size:13px;color:var(--mute)}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media (max-width:720px){.grid3{grid-template-columns:1fr}}
+.agent{border-radius:14px;padding:16px;text-align:center;border:2px solid}
+.agent .big{font-size:44px}
+.agent b{display:block;font-size:18px;margin:4px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:10px}
+.chip{font-size:12px;padding:3px 9px;border-radius:999px;background:var(--card);border:1px solid var(--line)}
+.bars .row{display:grid;grid-template-columns:150px 1fr 48px;align-items:center;gap:10px;margin:6px 0;font-size:13px}
+.bars .bar{height:22px;border-radius:6px}
+.bars .row code{font-size:13px}
+.bars .v{color:var(--mute);text-align:right;font-variant-numeric:tabular-nums}
+.cmds{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.cmd{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:12px;padding:10px}
+.cmd .e{font-size:26px}
+.cmd code{font-weight:700;font-size:13px}
+.cmd small{display:block;color:var(--mute)}
+.theme{position:fixed;top:12px;right:12px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:999px;padding:6px 10px;cursor:pointer;font-size:16px;z-index:5}
+
+/* analogy strip */
+.cast{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.cast.mach{grid-template-columns:repeat(3,1fr);max-width:62%}
+@media (max-width:720px){.cast.mach{max-width:none;grid-template-columns:repeat(2,1fr)}}
+.cast.mach .who{background:var(--bg);border-style:dashed;animation:none}
+.castlbl{font-size:14px;margin-bottom:8px}
+.who{position:relative}
+.who .tag{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:var(--card);border:2px solid;border-radius:999px;font-size:11px;font-weight:700;padding:0 8px;white-space:nowrap}
+@media (max-width:720px){.cast{grid-template-columns:repeat(2,1fr)}}
+.who{border-radius:14px;padding:12px 8px;text-align:center;border:2px solid;animation:bob 3s ease-in-out infinite}
+.who:nth-child(2){animation-delay:.3s}.who:nth-child(3){animation-delay:.6s}.who:nth-child(4){animation-delay:.9s}.who:nth-child(5){animation-delay:1.2s}
+.who .big{font-size:38px}
+.who b{display:block;margin-top:2px}
+.who small{display:block;color:var(--mute);font-size:12px}
+.who .eq{font-size:22px;margin:2px 0}
+@keyframes bob{50%{transform:translateY(-4px)}}
+
+/* e2e player */
+.player{display:grid;grid-template-columns:1fr 260px;gap:16px}
+@media (max-width:820px){.player{grid-template-columns:1fr}}
+.caption{display:flex;align-items:center;gap:14px;border-radius:14px;padding:12px 16px;margin-bottom:10px;background:var(--hub-s);border:2px solid var(--hub);min-height:74px}
+.caption .e{font-size:40px;line-height:1}
+.caption .txt{font-size:18px;font-weight:700}
+.caption .num{margin-left:auto;color:var(--mute);font-variant-numeric:tabular-nums;font-size:13px;white-space:nowrap}
+.caption.pop{animation:pop .35s ease}
+@keyframes pop{0%{transform:scale(.97);opacity:.4}100%{transform:none;opacity:1}}
+.stage{border:1px solid var(--line);border-radius:14px;background:var(--bg)}
+.node rect{transition:stroke-width .2s}
+.node.on rect{stroke-width:5}
+.node.on{animation:pulse .9s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+@keyframes pulse{50%{transform:scale(1.05)}}
+.node.busy rect{stroke-dasharray:12 6;animation:dash .8s linear infinite}
+.edge{stroke:var(--line);stroke-width:2;fill:none}
+#live{fill:none;stroke-width:4;stroke-linecap:round;stroke-dasharray:10 8;animation:dash .6s linear infinite}
+.ph rect{fill:var(--card);stroke:var(--line);stroke-width:1.5;transition:all .3s}
+.ph text{font-size:12px;font-weight:600}
+.ph.on rect{fill:var(--hub);stroke:var(--hub)}
+.ph.on text{fill:#fff}
+.ph.done rect{fill:var(--hub-s)}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.controls button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:16px;cursor:pointer}
+.controls button.main{background:var(--hub);color:#fff;border-color:var(--hub);min-width:110px;font-weight:700}
+.chapters{display:flex;gap:3px;flex:1;min-width:220px}
+.chapters .d{flex:1;height:12px;border-radius:4px;background:var(--line);cursor:pointer;opacity:.45;transition:opacity .2s}
+.chapters .d.seen{opacity:1}
+.chapters .d.cur{outline:2px solid var(--ink);outline-offset:1px}
+.chlegend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--mute);margin-top:8px}
+.chlegend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-2px}
+.feed{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--bg);max-height:520px;overflow:auto}
+.feed h3{margin:0 0 10px;font-size:14px}
+.feed .it{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--hub);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:13px;animation:slide .4s ease}
+.feed .empty{color:var(--mute);font-size:13px}
+@keyframes slide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+
+
+.keys{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px;margin-bottom:10px}
+.keys .k i{display:inline-block;width:14px;height:14px;border-radius:4px;border:3px solid;margin-right:5px;vertical-align:-3px}
+.keys .z i{display:inline-block;width:16px;height:14px;border-radius:4px;border:1px solid var(--line);margin-right:5px;vertical-align:-3px}
+.keys .sep{width:1px;height:18px;background:var(--line)}
+.noec2{border:2px dashed var(--obs);background:var(--obs-s);border-radius:12px;padding:8px 14px;margin-bottom:12px;font-size:14px}
+.side{display:flex;flex-direction:column;gap:12px}
+.card{border:2px solid var(--hub);border-radius:14px;padding:12px;background:var(--card);min-height:190px}
+.card .hd{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.card .hd .e{font-size:32px}
+.card .hd b{font-size:16px;display:block}
+.card .kind{display:inline-block;font-size:12px;font-weight:700;border:2px solid;border-radius:999px;padding:1px 8px;margin-top:2px}
+.card .what{font-size:14px;margin:6px 0 10px}
+.card .row{display:grid;grid-template-columns:26px 1fr;gap:4px;font-size:12.5px;margin:5px 0}
+.card .row span:first-child{font-size:16px}
+.card .row small{display:block;color:var(--mute);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+.node{cursor:pointer}
+#n-scion.on{animation:none}
+#think{fill:none;stroke:var(--llm);stroke-width:3;stroke-dasharray:3 7;stroke-linecap:round;animation:dash .9s linear infinite reverse}
+.badge rect{fill:var(--card);stroke-width:2}
+.badge text{font-size:11px;font-weight:700}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.tabs button{background:var(--card);color:var(--ink);border:2px solid var(--line);border-radius:12px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer}
+.tabs button.on{border-color:var(--hub);background:var(--hub-s)}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+@media (max-width:720px){.cgrid{grid-template-columns:1fr}}
+.panel{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--bg)}
+.panel h3{margin:0 0 8px;font-size:14px}
+.panel h3 small{color:var(--mute);font-weight:400}
+.mono,.frame code{font-family:ui-monospace,Menlo,monospace}
+.frame{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-left:5px solid;border-radius:8px;padding:5px 10px;margin-bottom:5px;background:var(--card);font-size:13px;animation:slide .25s ease}
+.frame:first-child{box-shadow:0 0 0 2px var(--hub)}
+.frame small{margin-left:auto;color:var(--mute)}
+.dbrow{display:flex;gap:8px;font-size:13px;margin:4px 0}
+.dbrow b{min-width:92px;color:var(--mute);font-weight:600}
+.dbrow span{font-family:ui-monospace,Menlo,monospace}
+.dbrow span.chg{animation:flash 1s ease}
+@keyframes flash{0%{background:var(--hub);color:#fff}100%{background:transparent}}
+#cData{font-size:13px;word-break:break-word}
+.fn rect{fill:transparent;transition:fill .2s}
+.fn text{font-family:ui-monospace,Menlo,monospace;font-size:12.5px}
+.fn.stk rect{fill:var(--hub-s)}
+.fn.cur rect{fill:var(--hub)}
+.fn.cur text{fill:#fff;font-weight:700}
+.mod.on>rect:first-child{stroke-width:4}
+#cLive.ret{stroke-dasharray:6 6;animation:dash .6s linear infinite}
+#cLive.call{stroke-dasharray:none}
+/* flowing arrows + reveal */
+.flow path{stroke-dasharray:8 6;animation:dash 1.4s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-28}}
+.tip{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:var(--bg);font-size:14px}
+section.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s ease,transform .6s ease}
+section.reveal.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  section.reveal{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+<button class="theme" id="t" aria-label="Toggle theme">◐</button>
+<main>
+<h1>🤖 agent-hub</h1>
+<p class="sub">PR comment → AI agents → code on the PR</p>
+
+<nav>
+  <a href="#cast">👥 Who's who</a><a href="#e2e">▶️ Watch it run</a>
+  <a href="#s1">1 · Big picture</a><a href="#s2">2 · PR journey</a>
+  <a href="#s4">3 · Inside the code</a><a href="#s5">4 · Commands</a><a href="#s6">5 · Metrics</a><a href="#s7">6 · Folders</a>
+</nav>
+
+<!-- CAST -->
+<section id="cast" class="reveal">
+<h2><span class="n">👥</span> Think of a building site 🏗️</h2>
+<div class="castlbl">👷 People with a role: <b>only the human and the LLMs 🤖</b></div>
+<div class="cast">
+  <div class="who" style="background:var(--human-s);border-color:var(--human)"><span class="tag" style="border-color:var(--human)">👤 human</span><div class="big">🧑‍💻</div><div class="eq">= 👔</div><b>You</b><small>the client</small></div>
+  <div class="who" style="background:var(--gh-s);border-color:var(--llm)"><span class="tag" style="border-color:var(--llm)">🤖 LLM</span><div class="big">🧭</div><div class="eq">= 🗣️</div><b>Router</b><small>interpreter</small></div>
+  <div class="who" style="background:var(--plan-s);border-color:var(--llm)"><span class="tag" style="border-color:var(--llm)">🤖 LLM</span><div class="big">📝</div><div class="eq">= 📐</div><b>Planner</b><small>architect</small></div>
+  <div class="who" style="background:var(--dev-s);border-color:var(--llm)"><span class="tag" style="border-color:var(--llm)">🤖 LLM</span><div class="big">🛠️</div><div class="eq">= 👷</div><b>Developer</b><small>builder</small></div>
+  <div class="who" style="background:var(--rev-s);border-color:var(--llm)"><span class="tag" style="border-color:var(--llm)">🤖 LLM</span><div class="big">🔍</div><div class="eq">= 🕵️</div><b>Reviewer</b><small>inspector</small></div>
+</div>
+<div class="castlbl" style="margin-top:18px">⚙️ Machines on the site: <b>plain code, no role, no AI</b></div>
+<div class="cast mach">
+  <div class="who" style="border-color:var(--py)"><span class="tag" style="border-color:var(--py)">🐍 Python</span><div class="big">🚦</div><div class="eq">= 🚦</div><b>Orchestrator</b><small>traffic light: same input → same output</small></div>
+  <div class="who" style="border-color:var(--scion)"><span class="tag" style="border-color:var(--scion)">⚙️ server</span><div class="big">⚙️</div><div class="eq">= 🚪</div><b>Scion Hub</b><small>site gate: lets workers in and out</small></div>
+  <div class="who" style="border-color:var(--db)"><span class="tag" style="border-color:var(--db)">📄 file</span><div class="big">🗄️</div><div class="eq">= 📒</div><b>SQLite</b><small>logbook: where we are</small></div>
+</div>
+<p class="tip">💡 The 🚦 orchestrator doesn't <i>think</i>. It's a fixed rulebook (<code>machine.py</code>): <b>"reviewer said ❌ → developer goes next"</b>. Every judgment call is made by an 🤖 LLM or by you.</p>
+</section>
+
+<!-- E2E PLAYER -->
+<section id="e2e" class="reveal">
+<h2><span class="n">▶</span> Watch one PR, start to finish</h2>
+<div class="keys">
+  <span class="k"><i style="border-color:var(--py)"></i>🐍 Python job</span>
+  <span class="k"><i style="border-color:var(--llm)"></i>🤖 LLM (AI)</span>
+  <span class="k"><i style="border-color:var(--scion)"></i>⚙️ Server</span>
+  <span class="k"><i style="border-color:var(--db)"></i>📄 Data / file</span>
+  <span class="k"><i style="border-color:var(--cl)"></i>☁️ Cloud service</span>
+  <span class="k"><i style="border-color:var(--human)"></i>👤 Human</span>
+  <span class="sep"></span>
+  <span class="z"><i style="background:var(--zc)"></i>☁️ internet</span>
+  <span class="z"><i style="background:var(--zm)"></i>💻 your Mac</span>
+  <span class="z"><i style="background:var(--zd)"></i>🐳 Docker on your Mac</span>
+</div>
+<div class="noec2">🚫☁️ <b>No EC2.</b> Every program runs on <b>your Mac</b>, and <b>every 🤖 LLM runs in a 🐳 Scion container</b>. The orchestrator itself never calls a model. The only things in the cloud are services we call: GitHub, Anthropic (the AI) and Redshift (the data).</div>
+<div class="player">
+  <div>
+    <div class="caption" id="cap"><span class="e" id="capE">▶️</span><span class="txt" id="capT">Press play</span><span class="num" id="capN"></span></div>
+    <svg class="stage" id="stage" viewBox="0 0 1000 660" role="img" aria-label="Animated end-to-end workflow">
+      <g id="zones">
+        <rect x="10" y="15" width="150" height="150" rx="16" fill="none" stroke="var(--line)" stroke-dasharray="4 4"/>
+        <text x="85" y="161" font-size="10" font-weight="700" text-anchor="middle" class="mute">🌍 anywhere</text>
+        <rect x="180" y="15" width="810" height="150" rx="16" fill="var(--zc)" stroke="var(--line)"/>
+        <text x="194" y="161" font-size="11" font-weight="700">☁️ INTERNET: managed services</text>
+        <rect x="10" y="190" width="980" height="400" rx="16" fill="var(--zm)" stroke="var(--line)" stroke-width="2"/>
+        <text x="24" y="210" font-size="12" font-weight="700">💻 YOUR MAC: local processes, no EC2</text>
+        <rect x="200" y="400" width="790" height="180" rx="14" fill="var(--zd)" stroke="var(--scion)" stroke-dasharray="6 4"/>
+        <text x="214" y="418" font-size="12" font-weight="700">🐳 DOCKER DESKTOP: a fresh container for each agent run</text>
+        <text x="192" y="300" font-size="10" class="mute" transform="rotate(-90 192 300)">🌐 network</text>
+      </g>
+      <g id="edges"></g>
+      <path id="think" d="" opacity="0"/>
+      <path id="live" d="" stroke="var(--hub)" opacity="0"/>
+      <g id="packet" opacity="0">
+        <circle r="22" fill="var(--card)" stroke="var(--hub)" stroke-width="3" id="pkC"/>
+        <text id="pkE" text-anchor="middle" dominant-baseline="central" font-size="22"></text>
+      </g>
+      <g id="nodes"></g>
+      <g id="phases"></g>
+    </svg>
+    <div class="controls">
+      <button id="bPrev" aria-label="Previous step">⏮</button>
+      <button id="bPlay" class="main">▶ Play</button>
+      <button id="bNext" aria-label="Next step">⏭</button>
+      <button id="bSpeed" aria-label="Speed">1×</button>
+      <div class="chapters" id="chap"></div>
+    </div>
+    <div class="chlegend" id="chleg"></div>
+  </div>
+  <div class="side">
+    <div class="card" id="card"></div>
+    <div class="feed">
+      <h3>💬 What you see on the PR</h3>
+      <div id="feed"><div class="empty">nothing yet…</div></div>
+    </div>
+  </div>
+</div>
+<p class="tip">💡 Hover over or tap any box to see what it is. A dashed, spinning border means that agent is <b>busy</b>. The purple dashed line going up to ☁️ Anthropic means it is <b>thinking with the AI</b>.</p>
+</section>
+
+<!-- 1 BIG PICTURE -->
+<section class="reveal" id="s1">
+<h2><span class="n">1</span> Big picture</h2>
+<svg viewBox="0 0 1000 480" role="img" aria-label="System overview">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--mute)"/></marker>
+    <marker id="aL" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="var(--llm)"/></marker>
+  </defs>
+  <!-- zones -->
+  <rect x="10" y="10" width="160" height="120" rx="14" fill="none" stroke="var(--line)" stroke-dasharray="4 4"/>
+  <text x="90" y="124" text-anchor="middle" font-size="10" font-weight="700" class="mute">🌍 anywhere</text>
+  <rect x="180" y="10" width="810" height="120" rx="14" fill="var(--zc)" stroke="var(--line)"/>
+  <text x="980" y="124" text-anchor="end" font-size="11" font-weight="700">☁️ INTERNET</text>
+  <rect x="10" y="150" width="980" height="320" rx="14" fill="var(--zm)" stroke="var(--line)" stroke-width="2"/>
+  <text x="24" y="168" font-size="11" font-weight="700">💻 YOUR MAC</text>
+  <rect x="290" y="178" width="690" height="282" rx="12" fill="var(--zd)" stroke="var(--scion)" stroke-dasharray="6 4"/>
+  <text x="304" y="198" font-size="11" font-weight="700">🐳 DOCKER: every 🤖 LLM runs here, one container per run</text>
+
+  <!-- you -->
+  <rect x="25" y="25" width="130" height="85" rx="12" fill="var(--human-s)" stroke="var(--human)" stroke-width="2"/>
+  <text x="90" y="62" text-anchor="middle" font-size="30">🧑‍💻</text>
+  <text x="90" y="94" text-anchor="middle" font-weight="700">You</text>
+  <!-- cloud -->
+  <g text-anchor="middle">
+    <rect x="200" y="25" width="170" height="85" rx="12" fill="var(--gh-s)" stroke="var(--gh)" stroke-width="2"/>
+    <text x="285" y="58" font-size="26">🐙</text><text x="285" y="84" font-weight="700">GitHub PR</text><text x="285" y="100" font-size="11" class="mute">label: scion</text>
+    <rect x="480" y="25" width="170" height="85" rx="12" fill="var(--hub-s)" stroke="var(--llm)" stroke-width="2"/>
+    <text x="565" y="58" font-size="26">✨</text><text x="565" y="84" font-weight="700">Anthropic API</text><text x="565" y="100" font-size="11" class="mute">the AI thinks here</text>
+    <rect x="720" y="25" width="170" height="85" rx="12" fill="var(--db-s)" stroke="var(--db)" stroke-width="2"/>
+    <text x="805" y="58" font-size="26">🏭</text><text x="805" y="84" font-weight="700">Redshift</text><text x="805" y="100" font-size="11" class="mute">AWS · dev cluster</text>
+  </g>
+  <!-- mac: python side -->
+  <g text-anchor="middle">
+    <rect x="40" y="180" width="210" height="95" rx="12" fill="var(--hub-s)" stroke="var(--hub)" stroke-width="3"/>
+    <text x="145" y="212" font-size="26">🚦</text><text x="145" y="240" font-weight="700" font-size="15">orchestrator 🐍</text><text x="145" y="258" font-size="11" class="mute">fixed rules · no AI · every 20 s</text>
+    <rect x="40" y="300" width="210" height="60" rx="12" fill="var(--scion-s)" stroke="var(--scion)" stroke-width="2"/>
+    <text x="145" y="326" font-weight="700">⚙️ Scion Hub</text><text x="145" y="344" font-size="11" class="mute">scion server · :8080</text>
+    <rect x="40" y="385" width="210" height="60" rx="12" fill="var(--db-s)" stroke="var(--db)" stroke-width="2"/>
+    <text x="145" y="411" font-weight="700">🗄️ SQLite</text><text x="145" y="429" font-size="11" class="mute">phase · rounds · lock · routes</text>
+  </g>
+  <!-- containers -->
+  <g text-anchor="middle">
+    <rect x="310" y="250" width="150" height="120" rx="12" fill="var(--plan-s)" stroke="var(--plan)" stroke-width="2"/>
+    <text x="385" y="290" font-size="28">📝</text><text x="385" y="318" font-weight="700">Planner</text><text x="385" y="336" font-size="11" class="mute">writes the plan</text>
+    <rect x="475" y="250" width="150" height="120" rx="12" fill="var(--dev-s)" stroke="var(--dev)" stroke-width="2"/>
+    <text x="550" y="290" font-size="28">🛠️</text><text x="550" y="318" font-weight="700">Developer</text><text x="550" y="336" font-size="11" class="mute">code · dbt inside</text>
+    <rect x="640" y="250" width="150" height="120" rx="12" fill="var(--rev-s)" stroke="var(--rev)" stroke-width="2"/>
+    <text x="715" y="290" font-size="28">🔍</text><text x="715" y="318" font-weight="700">Reviewer</text><text x="715" y="336" font-size="11" class="mute">✅ or ❌</text>
+    <rect x="805" y="250" width="150" height="120" rx="12" fill="var(--gh-s)" stroke="var(--llm)" stroke-width="2"/>
+    <text x="880" y="290" font-size="28">🧭</text><text x="880" y="318" font-weight="700">Router</text><text x="880" y="336" font-size="11" class="mute">reads prose · Haiku</text>
+  </g>
+  <g font-size="10.5" text-anchor="middle" font-weight="700">
+    <text x="385" y="356" style="fill:var(--llm)">🤖 LLM</text><text x="550" y="356" style="fill:var(--llm)">🤖 LLM</text><text x="715" y="356" style="fill:var(--llm)">🤖 LLM</text><text x="880" y="356" style="fill:var(--llm)">🤖 LLM · no lock</text>
+  </g>
+  <text x="632" y="420" text-anchor="middle" font-size="12" class="mute">each writes <tspan font-family="ui-monospace,Menlo,monospace">/workspace/.scion-out/verdict.json</tspan> when done</text>
+  <text x="632" y="440" text-anchor="middle" font-size="12" class="mute">🔒 one PR agent at a time · the router runs alongside</text>
+
+  <!-- arrows -->
+  <g class="flow" stroke="var(--mute)" stroke-width="2.5" fill="none" marker-end="url(#a)">
+    <path d="M155 67 H196"/>
+    <path d="M250 114 L190 176" marker-start="url(#a)"/>
+    <path d="M145 275 V296"/>
+    <path d="M250 330 H306"/>
+    <path d="M40 240 C12 240 12 415 36 415"/>
+    <path d="M385 250 L320 114"/>
+    <path d="M580 250 L770 114" stroke-dasharray="5 4"/>
+  </g>
+  <g class="flow" stroke="var(--llm)" stroke-width="3" fill="none" marker-end="url(#aL)">
+    <path d="M540 178 L555 114"/>
+  </g>
+  <g font-size="11" class="mute">
+    <text x="176" y="58" text-anchor="middle" class="mute">comment</text>
+    <text x="228" y="156" class="mute">gh CLI: read · write</text>
+    <text x="160" y="290" class="mute">REST</text>
+    <text x="256" y="320" class="mute">start</text>
+    <text x="256" y="348" class="mute">exec · stop</text>
+    <text x="20" y="330" class="mute" transform="rotate(-90 20 330)">save · load</text>
+    <text x="300" y="160" class="mute">signed commits</text>
+    <text x="700" y="160" class="mute">dbt (developer only)</text>
+  </g>
+  <text x="560" y="160" font-size="11" font-weight="700" text-anchor="middle" style="fill:var(--llm)">🧠 every LLM call</text>
+</svg>
+<p class="tip">💡 The 🚦 orchestrator only runs rules and never calls an AI. Every 🤖 LLM, the router included, is a 🐳 container that Scion starts, reads (<code>verdict.json</code>) and stops. GitHub is only the <b>chat</b>: the truth about the PR lives in SQLite 🗄️</p>
+</section>
+
+<!-- 2 STATE MACHINE -->
+<section class="reveal" id="s2">
+<h2><span class="n">2</span> A PR's journey</h2>
+<svg viewBox="0 0 1000 400" role="img" aria-label="PR phases">
+  <defs>
+    <marker id="b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--mute)"/></marker>
+  </defs>
+  <g stroke-width="2">
+    <!-- row 1 -->
+    <rect x="20"  y="60" width="130" height="70" rx="35" fill="var(--human-s)" stroke="var(--human)"/>
+    <rect x="200" y="60" width="150" height="70" rx="12" fill="var(--plan-s)" stroke="var(--plan)" stroke-width="3"/>
+    <rect x="400" y="60" width="150" height="70" rx="12" fill="var(--human-s)" stroke="var(--human)"/>
+    <rect x="600" y="60" width="150" height="70" rx="12" fill="var(--dev-s)" stroke="var(--dev)" stroke-dasharray="6 4"/>
+    <rect x="800" y="60" width="170" height="70" rx="12" fill="var(--dev-s)" stroke="var(--dev)" stroke-width="3"/>
+    <!-- row 2 -->
+    <rect x="800" y="260" width="170" height="70" rx="12" fill="var(--rev-s)" stroke="var(--rev)" stroke-dasharray="6 4"/>
+    <rect x="580" y="260" width="170" height="70" rx="12" fill="var(--rev-s)" stroke="var(--rev)" stroke-width="3"/>
+    <rect x="300" y="260" width="200" height="70" rx="35" fill="var(--human-s)" stroke="var(--human)" stroke-width="3"/>
+  </g>
+  <g text-anchor="middle" font-weight="700" font-size="14">
+    <text x="85"  y="92" font-size="22">🏷️</text><text x="85" y="117">start</text>
+    <text x="275" y="92" font-size="22">📝</text><text x="275" y="117">planning</text>
+    <text x="475" y="92" font-size="22">👀</text><text x="475" y="117">plan review</text>
+    <text x="675" y="92" font-size="22">⏳</text><text x="675" y="117">dev queued</text>
+    <text x="885" y="92" font-size="22">🛠️</text><text x="885" y="117">developing</text>
+    <text x="885" y="292" font-size="22">⏳</text><text x="885" y="317">review queued</text>
+    <text x="665" y="292" font-size="22">🔍</text><text x="665" y="317">reviewing</text>
+    <text x="400" y="292" font-size="22">🙋</text><text x="400" y="317">human review</text>
+  </g>
+  <g class="flow" stroke="var(--mute)" stroke-width="2.5" fill="none" marker-end="url(#b)">
+    <path d="M150 95 H196"/>
+    <path d="M350 95 H396"/>
+    <path d="M550 95 H596"/>
+    <path d="M750 95 H796"/>
+    <path d="M885 130 V256"/>
+    <path d="M800 295 H754"/>
+    <path d="M580 295 H504"/>
+  </g>
+  <!-- loop back: changes requested -->
+  <path d="M665 260 C 665 200, 675 170, 675 134" stroke="var(--rev)" stroke-width="2.5" fill="none" marker-end="url(#b)"/>
+  <text x="690" y="200" font-size="13" fill="var(--rev)" style="fill:var(--rev)">❌ changes · max 3 🔁</text>
+  <!-- plan revise loop -->
+  <path d="M430 60 C 420 15, 330 15, 300 56" stroke="var(--plan)" stroke-width="2" fill="none" marker-end="url(#b)"/>
+  <text x="365" y="22" font-size="12" text-anchor="middle" style="fill:var(--plan)">✏️ update</text>
+  <g font-size="12" text-anchor="middle">
+    <text x="173" y="85" class="mute">auto</text>
+    <text x="573" y="85" class="mute">✅</text>
+    <text x="540" y="285" class="mute">✅</text>
+  </g>
+  <!-- legend inside -->
+  <g font-size="12">
+    <rect x="20" y="360" width="26" height="16" rx="4" fill="none" stroke="var(--mute)" stroke-width="3"/><text x="54" y="373" class="mute">agent working</text>
+    <rect x="170" y="360" width="26" height="16" rx="4" fill="none" stroke="var(--mute)" stroke-width="2" stroke-dasharray="4 3"/><text x="204" y="373" class="mute">queued (survives restart)</text>
+    <rect x="390" y="360" width="26" height="16" rx="8" fill="none" stroke="var(--mute)" stroke-width="2"/><text x="424" y="373" class="mute">human's turn</text>
+  </g>
+</svg>
+<p class="tip">💡 Reviewer says ❌ → back to the developer. After <b>3</b> ❌ in a row it stops and waits for you 🙋</p>
+</section>
+
+<!-- 4 CODE -->
+<section class="reveal" id="s4">
+<h2><span class="n">3</span> Inside the code: the interfaces between components</h2>
+<div class="tabs" id="cTabs"></div>
+<div class="caption" id="cCap"><span class="e" id="cCapE">🔬</span><span class="txt" id="cCapT">Pick a story and press play</span><span class="num" id="cCapN"></span></div>
+<svg class="stage" id="cStage" viewBox="0 0 1000 690" role="img" aria-label="Animated function calls between Python modules">
+  <g id="cMods"></g>
+  <path id="cLive" d="" fill="none" stroke-width="3.5" stroke-linecap="round" opacity="0"/>
+  <g id="cPk" opacity="0"><rect id="cPkR" rx="9" height="22" y="-11" stroke-width="2"/><text id="cPkT" y="4" text-anchor="middle" font-size="11.5" font-family="ui-monospace,Menlo,monospace" font-weight="700"></text></g>
+</svg>
+<div class="controls">
+  <button id="cPrev" aria-label="Previous step">⏮</button>
+  <button id="cPlay" class="main">▶ Play</button>
+  <button id="cNext" aria-label="Next step">⏭</button>
+  <button id="cSpeed" aria-label="Speed">1×</button>
+  <div class="chapters" id="cChap"></div>
+</div>
+<div class="chlegend" id="cChleg"></div>
+<div class="cgrid">
+  <div class="panel"><h3>📚 Call stack <small>(newest on top)</small></h3><div id="cStack"></div></div>
+  <div class="panel"><h3>💾 SQLite right now</h3><div id="cDb"></div><h3 style="margin-top:14px">📦 Just passed along</h3><div id="cData" class="mono">—</div></div>
+</div>
+<div class="keys" style="margin-top:12px">
+  <span class="k"><i style="border-color:var(--human)"></i>🚪 entry</span>
+  <span class="k"><i style="border-color:var(--gh)"></i>👂 parse</span>
+  <span class="k"><i style="border-color:var(--scion)"></i>✋ act</span>
+  <span class="k"><i style="border-color:var(--hub)"></i>🧠 decide</span>
+  <span class="k"><i style="border-color:var(--plan)"></i>🧰 helpers</span>
+  <span class="k"><i style="border-color:var(--db)"></i>🔌 adapter</span>
+  <span class="k"><i style="border-color:var(--cl);border-style:dashed"></i>☁️🐳 external system</span>
+  <span class="sep"></span>
+  <span>━ call</span><span>┅ return</span><span>✨ pure = no I/O</span><span>⚡ does I/O</span>
+</div>
+<p class="tip">💡 Only calls that <b>cross a boundary</b> are shown. Calls inside a module are hidden. Look at where the arrows go: only <b>runner.py</b> talks to the 🔌 adapters, and only the adapters leave the Python process (right of the dashed line). <b>machine.py</b> only receives <code>(state, event)</code> and gives back a <code>Transition</code>, so every rule can be tested without GitHub or Scion.</p>
+</section>
+
+<!-- 5 COMMANDS -->
+<section class="reveal" id="s5">
+<h2><span class="n">4</span> What you type on the PR</h2>
+<div class="cmds">
+  <div class="cmd"><span class="e">🏷️</span><div><code>label scion</code><small>planner starts</small></div></div>
+  <div class="cmd"><span class="e">📝</span><div><code>/plan …</code><small>re-plan</small></div></div>
+  <div class="cmd"><span class="e">✅</span><div><code>plan approved</code><small>developer starts</small></div></div>
+  <div class="cmd"><span class="e">✏️</span><div><code>/update-plan …</code><small>fix the plan</small></div></div>
+  <div class="cmd"><span class="e">🛠️</span><div><code>@developer fix: …</code><small>fix the code</small></div></div>
+  <div class="cmd"><span class="e">🎓</span><div><code>@reviewer learn: …</code><small>teach reviewer</small></div></div>
+  <div class="cmd"><span class="e">ℹ️</span><div><code>/status</code><small>refresh status</small></div></div>
+  <div class="cmd"><span class="e">🛑</span><div><code>/stop</code><small>stop agent</small></div></div>
+  <div class="cmd"><span class="e">💬</span><div><code>any text</code><small>🤖 guesses intent</small></div></div>
+</div>
+<p class="tip">💡 Plain words work too: "plan ok", "implement it", "implementalo" 🇮🇹</p>
+</section>
+
+<!-- 6 METRICS -->
+<section class="reveal" id="s6">
+<h2><span class="n">5</span> Metrics pipeline</h2>
+<svg viewBox="0 0 1000 260" role="img" aria-label="Observability">
+  <defs>
+    <marker id="d" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--mute)"/></marker>
+  </defs>
+  <g stroke-width="2" font-weight="700" text-anchor="middle" font-size="14">
+    <rect x="20" y="20"  width="200" height="60" rx="12" fill="var(--hub-s)" stroke="var(--hub)"/><text x="120" y="56">🧠 agent-hub</text>
+    <rect x="20" y="100" width="200" height="60" rx="12" fill="var(--plan-s)" stroke="var(--plan)"/><text x="120" y="136">🤖 Claude Code 💰</text>
+    <rect x="20" y="180" width="200" height="60" rx="12" fill="var(--scion-s)" stroke="var(--scion)"/><text x="120" y="216">🐳 Scion 🔧</text>
+
+    <rect x="330" y="95" width="170" height="70" rx="14" fill="var(--obs-s)" stroke="var(--obs)" stroke-width="3"/><text x="415" y="136">📡 OTel collector</text>
+
+    <rect x="590" y="40"  width="160" height="60" rx="12" fill="var(--obs-s)" stroke="var(--obs)"/><text x="670" y="76">📊 Prometheus</text>
+    <rect x="590" y="160" width="160" height="60" rx="12" fill="var(--obs-s)" stroke="var(--obs)"/><text x="670" y="196">🧵 Tempo</text>
+
+    <rect x="830" y="95" width="150" height="70" rx="14" fill="var(--gh-s)" stroke="var(--gh)" stroke-width="3"/><text x="905" y="136">📈 Grafana</text>
+  </g>
+  <g class="flow" stroke="var(--mute)" stroke-width="2.5" fill="none" marker-end="url(#d)">
+    <path d="M220 50 L326 115"/><path d="M220 130 H326"/><path d="M220 210 L326 145"/>
+    <path d="M500 118 L586 75"/><path d="M500 142 L586 185"/>
+    <path d="M750 70 L826 115"/><path d="M750 190 L826 145"/>
+  </g>
+  <g font-size="11" class="mute" text-anchor="middle">
+    <text x="905" y="190" class="mute">localhost:3000</text>
+    <text x="415" y="190" class="mute">🔒 all local</text>
+  </g>
+</svg>
+<div class="legend"><span>💰 cost & tokens</span><span>🔧 tool calls</span><span>🔗 joined by PR number</span></div>
+<p class="tip">💡 Every number is tagged with the PR number, so Grafana can show cost per PR 💰</p>
+</section>
+
+<!-- 7 FOLDERS -->
+<section class="reveal" id="s7">
+<h2><span class="n">6</span> Folders</h2>
+<svg viewBox="0 0 1000 300" role="img" aria-label="Folder tree">
+  <g stroke="var(--line)" stroke-width="2" fill="none">
+    <path d="M80 70 V270"/>
+    <path d="M80 110 H130"/><path d="M80 150 H130"/><path d="M80 190 H130"/><path d="M80 230 H130"/><path d="M80 270 H130"/>
+  </g>
+  <rect x="30" y="20" width="220" height="46" rx="10" fill="var(--hub-s)" stroke="var(--hub)" stroke-width="2"/>
+  <text x="46" y="50" font-weight="700" font-size="16">📦 di_agent_hub/</text>
+  <g font-size="15" font-weight="700">
+    <text x="140" y="115">🧠 src/agent_hub</text>
+    <text x="140" y="155">🐳 scion</text>
+    <text x="140" y="195">⚙️ config</text>
+    <text x="140" y="235">📈 ops/observability</text>
+    <text x="140" y="275">🧪 tests</text>
+  </g>
+  <g font-size="13" class="mute">
+    <text x="360" y="115" class="mute">the 🚦 orchestrator daemon (pure Python, no AI)</text>
+    <text x="360" y="155" class="mute">builds agent containers from dbt repo prompts · Dockerfile</text>
+    <text x="360" y="195" class="mute">which repo · templates · timeouts</text>
+    <text x="360" y="235" class="mute">docker compose: collector · Prometheus · Tempo · Grafana</text>
+    <text x="360" y="275" class="mute">8 test files · offline replay fixture</text>
+  </g>
+  <g stroke="var(--line)" stroke-dasharray="3 4">
+    <path d="M320 110 H352"/><path d="M250 150 H352"/><path d="M250 190 H352"/><path d="M320 230 H352"/><path d="M250 270 H352"/>
+  </g>
+</svg>
+</section>
+</main>
+<script>
+document.getElementById('t').onclick=()=>{
+  const r=document.documentElement;
+  const dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+  r.dataset.theme=dark?'light':'dark';
+};
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+document.querySelectorAll('section.reveal').forEach(s=>io.observe(s));
+
+/* ---------- E2E PLAYER ---------- */
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+
+const KIND={py:['🐍 Python job','var(--py)'],llm:['🤖 LLM agent','var(--llm)'],llms:['🤖 LLM · one-shot','var(--llm)'],ai:['🤖 LLM · the AI','var(--llm)'],
+  srv:['⚙️ Server','var(--scion)'],file:['📄 File','var(--db)'],dbx:['🗄️ Database','var(--db)'],saas:['☁️ SaaS','var(--cl)'],mon:['📈 Monitoring','var(--obs)'],human:['👤 Human','var(--human)']};
+
+// e=emoji l=label k=kind rt=runtime line   what / phys / log = info card
+const N={
+  you :{x:85 ,y:95 ,e:'🧑‍💻',l:'You',k:'human',c:'human',rt:'in your browser',
+        what:'Writes comments, approves the plan, merges.',phys:'Anywhere',log:'github.com in a browser'},
+  gh  :{x:330,y:95 ,e:'🐙',l:'GitHub PR',k:'saas',c:'gh',rt:'github.com',
+        what:'Where people and agents talk, and where the code lives.',phys:'GitHub cloud',log:'The orchestrator reaches it with the gh CLI. Agents commit through the GraphQL API (signed commits).'},
+  anth:{x:600,y:95 ,e:'✨',l:'Anthropic API',k:'ai',c:'hub',rt:'Claude models',
+        what:'The brain behind every AI step. Every 🤖 box sends its thinking here.',phys:'Anthropic cloud',log:'HTTPS API (Opus/Sonnet for agents, Haiku for the router)'},
+  rs  :{x:870,y:95 ,e:'🏭',l:'Redshift',k:'dbx',c:'db',rt:'AWS · dev cluster',
+        what:'The data warehouse. Only the developer touches it, to test its dbt models.',phys:'AWS (managed Redshift, not EC2)',log:'data-rs-bi-development:5439 · schema dev_dbt_agent_pr&lt;N&gt;'},
+  db  :{x:105,y:290,e:'🗄️',l:'SQLite',k:'file',c:'db',rt:'state/agent-hub.sqlite3',
+        what:'The orchestrator\'s memory: phase, review rounds and who holds the lock.',phys:'Your Mac (a file on disk)',log:'A SQLite file. No server.'},
+  hub :{x:330,y:290,e:'🚦',l:'Orchestrator',k:'py',c:'hub',rt:'daemon · python',
+        what:'A traffic light, not a person. Fixed rules (machine.py) say what happens next: same input, same output. No AI inside.',phys:'Your Mac',log:'A background Python process started by ops/run.sh (nohup). Checks GitHub every 20 s.'},
+  obs :{x:870,y:290,e:'📈',l:'Grafana stack',k:'mon',c:'obs',rt:'docker compose',
+        what:'Charts of cost, tokens, runs and rounds per PR.',phys:'Your Mac',log:'docker compose: OTel collector, Prometheus, Tempo, Grafana on localhost:3000'},
+  plan:{x:300,y:500,e:'📝',l:'Planner',k:'llm',c:'plan',rt:'Claude Code',
+        what:'Reads the PR and writes the plan. No dbt, no warehouse.',phys:'Your Mac, inside Docker. Thinks in ☁️ Anthropic',log:'Container scion-claude running the Claude Code CLI'},
+  dev :{x:510,y:500,e:'🛠️',l:'Developer',k:'llm',c:'dev',rt:'Claude Code + dbt',
+        what:'Writes the code, runs dbt, queries Redshift, commits.',phys:'Your Mac, inside Docker. Thinks in ☁️ Anthropic',log:'Container scion-claude-dbt: Claude Code CLI + dbt Fusion'},
+  rev :{x:720,y:500,e:'🔍',l:'Reviewer',k:'llm',c:'rev',rt:'Claude Code',
+        what:'Reads the diff, then ✅ approves or ❌ asks for changes.',phys:'Your Mac, inside Docker. Thinks in ☁️ Anthropic',log:'Container scion-claude running the Claude Code CLI'},
+  rt  :{x:910,y:500,e:'🧭',l:'Router',k:'llm',c:'gh',rt:'Claude Code · Haiku',
+        what:'Works out what a plain-words comment means ("use consumer_id instead?" → update-plan). Lives about a minute and takes no lock.',phys:'Your Mac, inside Docker. Thinks in ☁️ Anthropic',log:'Container comment-router (Haiku). Its only output is verdict.json'},
+  scion:{x:600,y:375,e:'⚙️',l:'Scion Hub',k:'srv',c:'scion',rt:'',bar:true,
+        what:'Starts and stops agent containers. Also reads their verdict.json.',phys:'Your Mac',log:'The "scion server" process, REST API on 127.0.0.1:8080, driving Docker Desktop'},
+};
+const HW=70,HH=55,BAR_Y=375,DOCK_Y=432,WIRE_Y=178,LANE_X=187;
+const AG=['plan','dev','rev','rt'],CLOUD=['gh','anth','rs'];
+const P=k=>typeof k==='string'?[N[k].x,N[k].y]:k;
+function route(f,t){
+  if(f==='hub'&&AG.includes(t))return [f,[N.hub.x,BAR_Y],[N[t].x,BAR_Y],t];
+  if(AG.includes(f)&&t==='hub')return route(t,f).reverse();
+  if(AG.includes(f)&&CLOUD.includes(t))return [f,[N[f].x,DOCK_Y],[LANE_X,DOCK_Y],[LANE_X,WIRE_Y],[N[t].x,WIRE_Y],t];
+  if(CLOUD.includes(f)&&AG.includes(t))return route(t,f).reverse();
+  return [f,t];
+}
+const viaScion=(f,t)=>(f==='hub'&&AG.includes(t))||(AG.includes(f)&&t==='hub');
+const dOf=pts=>pts.map(P).map((p,i)=>(i?'L':'M')+p[0]+' '+p[1]).join(' ');
+
+const PH=[['start','🏷️ start'],['plan-working','📝 planning'],['plan-review','👀 plan review'],['dev-pending','⏳ dev queued'],
+          ['dev-working','🛠️ developing'],['review-pending','⏳ review queued'],['reviewing','🔍 reviewing'],['human-review','🙋 your turn'],['merged','🎉 merged']];
+const BUSY={'plan-working':'plan','dev-working':'dev','reviewing':'rev'};
+const CH={plan:['📝 Plan','var(--plan)'],build:['🛠️ Build','var(--dev)'],review:['🔍 Review','var(--rev)'],fix:['🔁 Fix','var(--obs)'],ship:['🚀 Ship','var(--scion)']};
+
+const S=[
+ {ch:'plan',f:'you',t:'gh',e:'🏷️',x:'You add the label scion to your PR',p:'start',feed:'🏷️ Label <b>scion</b> added'},
+ {ch:'plan',f:'gh',t:'hub',e:'👀',x:'The orchestrator (a Python process on your Mac) spots it. It checks every 20 s',p:'start'},
+ {ch:'plan',f:'hub',t:'db',e:'💾',x:'It saves phase = planning in SQLite',p:'plan-working'},
+ {ch:'plan',f:'hub',t:'plan',e:'🚀',x:'It asks Scion to start a planner container in Docker',p:'plan-working',feed:'🤖 Status: <b>planner is working…</b>'},
+ {ch:'plan',f:'gh',t:'plan',e:'📖',x:'The planner reads the PR description and diff from GitHub',p:'plan-working'},
+ {ch:'plan',f:'plan',t:'anth',e:'🧠',x:'It thinks with Claude: the AI lives in the cloud, not on your Mac',p:'plan-working',col:'var(--llm)'},
+ {ch:'plan',f:'plan',t:'gh',e:'📝',x:'It writes the plan onto the PR',p:'plan-working',feed:'📝 <b>Plan</b> posted'},
+ {ch:'plan',f:'plan',t:'hub',e:'✅',x:'It writes verdict.json ("I\'m done"). The orchestrator reads it through Scion',p:'plan-review',feed:'💬 Plan ready. Say <b>plan approved</b> or ask for changes'},
+ {ch:'plan',f:'you',t:'gh',e:'💬',x:'You ask in plain words: "use consumer_id as the dist key?"',p:'plan-review',feed:'💬 <b>you:</b> can you use consumer_id as the dist key instead?'},
+ {ch:'plan',f:'gh',t:'hub',e:'❓',x:'That isn\'t a command, and fixed rules can\'t understand plain words',p:'plan-review'},
+ {ch:'plan',f:'hub',t:'rt',e:'🚀',x:'So Scion starts a 🤖 router container. No lock taken, the phase stays put',p:'plan-review',b:'rt'},
+ {ch:'plan',f:'rt',t:'anth',e:'🧠',x:'The router asks Claude Haiku (small, cheap) what the comment means',p:'plan-review',b:'rt',col:'var(--llm)'},
+ {ch:'plan',f:'rt',t:'hub',e:'✏️',x:'Next poll: the orchestrator reads its verdict.json, which says update-plan',p:'plan-review'},
+ {ch:'plan',f:'hub',t:'plan',e:'🚀',x:'A new planner container revises the plan',p:'plan-working',feed:'🤖 Status: <b>planner is revising…</b>'},
+ {ch:'plan',f:'plan',t:'gh',e:'📝',x:'The revised plan is posted',p:'plan-working',feed:'📝 <b>Plan v2</b> posted'},
+ {ch:'plan',f:'plan',t:'hub',e:'✅',x:'verdict.json says it\'s done',p:'plan-review'},
+ {ch:'build',f:'you',t:'gh',e:'👍',x:'You comment: plan approved',p:'plan-review',feed:'👍 <b>you:</b> plan approved'},
+ {ch:'build',f:'gh',t:'hub',e:'📥',x:'An exact phrase, so plain Python matches it. No AI needed 💸',p:'plan-review'},
+ {ch:'build',f:'hub',t:'db',e:'⏳',x:'Rule: plan approved, so save "developer queued". Even a crash now is safe',p:'dev-pending'},
+ {ch:'build',f:'hub',t:'dev',e:'🚀',x:'On its next check it starts the developer container (with dbt inside)',p:'dev-working',feed:'🤖 Status: <b>developer is working…</b>'},
+ {ch:'build',f:'dev',t:'rs',e:'🏭',x:'The developer runs dbt against Redshift on AWS (its own schema per PR)',p:'dev-working'},
+ {ch:'build',f:'dev',t:'gh',e:'🔏',x:'It commits through the GitHub API (signed commit)',p:'dev-working',feed:'🔏 commit: <b>implement plan</b>'},
+ {ch:'build',f:'dev',t:'hub',e:'✅',x:'verdict.json says it\'s done',p:'review-pending'},
+ {ch:'review',f:'hub',t:'rev',e:'🚀',x:'Rule: the developer is done, so the reviewer goes next',p:'reviewing',feed:'🤖 Status: <b>reviewer is working…</b>'},
+ {ch:'review',f:'gh',t:'rev',e:'📖',x:'The reviewer reads the diff',p:'reviewing'},
+ {ch:'review',f:'rev',t:'hub',e:'❌',x:'🤖 Reviewer judges: changes needed. Rule: round 1 of 3, so back to the developer',p:'dev-pending',r:1,col:'var(--rev)',feed:'❌ <b>reviewer:</b> changes requested (1/3)'},
+ {ch:'fix',f:'hub',t:'dev',e:'🔁',x:'The developer runs again, this time with the review notes',p:'dev-working',r:1,feed:'🤖 Status: <b>developer is fixing…</b>'},
+ {ch:'fix',f:'dev',t:'gh',e:'🔏',x:'It pushes a new signed commit with the fixes',p:'dev-working',r:1,feed:'🔏 commit: <b>address review</b>'},
+ {ch:'fix',f:'dev',t:'hub',e:'✅',x:'Done again',p:'review-pending',r:1},
+ {ch:'fix',f:'hub',t:'rev',e:'🚀',x:'The reviewer checks again',p:'reviewing',r:1},
+ {ch:'ship',f:'rev',t:'hub',e:'✅',x:'Reviewer: approved!',p:'human-review',r:1,col:'var(--scion)'},
+ {ch:'ship',f:'hub',t:'gh',e:'🏁',x:'Rule: the reviewer said ✅, so approve the PR (gh CLI) and delete the plan file',p:'human-review',r:1,feed:'✅ <b>approved</b> · plan file removed · 🙋 your turn'},
+ {ch:'ship',f:'you',t:'gh',e:'🎉',x:'You merge. The orchestrator removes the labels and the agents',p:'merged',r:1,feed:'🎉 <b>merged</b>'},
+];
+
+const $=id=>document.getElementById(id);
+const gE=$('edges'),gN=$('nodes'),gP=$('phases'),live=$('live'),pk=$('packet'),think=$('think');
+
+// static wires
+[['you','gh'],['gh','hub'],['hub','db'],[[N.hub.x,N.hub.y],[N.hub.x,BAR_Y]]].forEach(r=>el('path',{d:dOf(r),class:'edge'},gE));
+AG.forEach(a=>el('path',{d:dOf([[N[a].x,BAR_Y],[N[a].x,N[a].y]]),class:'edge'},gE));
+el('path',{d:dOf([[N.rt.x,DOCK_Y],[LANE_X,DOCK_Y],[LANE_X,WIRE_Y],[N.rs.x,WIRE_Y]]),class:'edge'},gE);
+AG.forEach(a=>el('path',{d:dOf([[N[a].x,DOCK_Y],[N[a].x,N[a].y]]),class:'edge'},gE));
+CLOUD.forEach(c=>el('path',{d:dOf([[N[c].x,WIRE_Y],[N[c].x,N[c].y]]),class:'edge'},gE));
+
+// nodes
+const nodeEl={},sub={};
+function badge(g,x,y,k){const b=el('g',{class:'badge'},g);const r=el('rect',{x,y,height:20,rx:10,stroke:KIND[k][1]},b);
+  const t=el('text',{x:x+8,y:y+14},b);t.textContent=KIND[k][0];r.setAttribute('width',t.getComputedTextLength()+16);}
+for(const k in N){const n=N[k];const g=el('g',{class:'node',id:'n-'+k,tabindex:0},gN);
+  if(n.bar){
+    el('rect',{x:200,y:BAR_Y-20,width:780,height:40,rx:12,fill:'var(--scion-s)',stroke:'var(--scion)','stroke-width':2.5},g);
+    el('text',{x:214,y:BAR_Y+5,'font-size':14,'font-weight':700},g).textContent='⚙️ Scion Hub';
+    el('text',{x:330,y:BAR_Y+5,'font-size':11,class:'mute'},g).textContent='';
+    el('text',{x:965,y:BAR_Y+5,'font-size':11,'text-anchor':'end',class:'mute'},g).textContent='scion server · :8080 · starts every 🤖 container';
+    badge(g,214,BAR_Y-31,n.k);
+  }else{
+    el('rect',{x:n.x-HW,y:n.y-HH,width:HW*2,height:HH*2,rx:14,fill:`var(--${n.c}-s)`,stroke:`var(--${n.c})`,'stroke-width':2.5},g);
+    el('text',{x:n.x,y:n.y-16,'text-anchor':'middle','font-size':28},g).textContent=n.e;
+    el('text',{x:n.x,y:n.y+12,'text-anchor':'middle','font-weight':700,'font-size':14},g).textContent=n.l;
+    el('text',{x:n.x,y:n.y+28,'text-anchor':'middle','font-size':10.5,class:'mute'},g).textContent=n.rt;
+    sub[k]=el('text',{x:n.x,y:n.y+44,'text-anchor':'middle','font-size':11,'font-weight':700,fill:'var(--hub)',style:'fill:var(--hub)'},g);
+    badge(g,n.x-HW+6,n.y-HH-11,n.k);
+  }
+  g.addEventListener('mouseenter',()=>{hover=k;card(k)});g.addEventListener('mouseleave',()=>{hover=null;card(cur)});
+  g.addEventListener('click',()=>{hover=k;card(k)});g.addEventListener('focus',()=>card(k));
+  nodeEl[k]=g;}
+// rounds indicator (left of docker zone)
+const rnd1=el('text',{x:105,y:480,'text-anchor':'middle','font-size':12,'font-weight':700},gP);rnd1.textContent='🔁 review rounds';
+const rnd=el('text',{x:105,y:506,'text-anchor':'middle','font-size':22,fill:'var(--rev)',style:'fill:var(--rev)'},gP);
+el('text',{x:105,y:526,'text-anchor':'middle','font-size':11,class:'mute'},gP).textContent='max 3, then you';
+// phase strip
+const phEl={};const pw=104,gap=7,x0=(1000-(PH.length*pw+(PH.length-1)*gap))/2;
+PH.forEach(([id,l],i)=>{const g=el('g',{class:'ph'},gP);const x=x0+i*(pw+gap);
+  el('rect',{x,y:608,width:pw,height:34,rx:17},g);el('text',{x:x+pw/2,y:630,'text-anchor':'middle'},g).textContent=l;phEl[id]=g;});
+
+// info card
+let hover=null,cur='hub';
+function card(k){const n=N[k];const [kl,kc]=KIND[n.k];
+  $('card').style.borderColor=kc;
+  $('card').innerHTML=`<div class="hd"><span class="e">${n.e}</span><div><b>${n.l}</b><span class="kind" style="border-color:${kc}">${kl}</span></div></div>
+  <div class="what">${n.what}</div>
+  <div class="row"><span>📍</span><div><small>physically runs on</small>${n.phys}</div></div>
+  <div class="row"><span>🧩</span><div><small>logically it is</small>${n.log}</div></div>`;}
+card('hub');
+
+// chapters
+const chap=$('chap');const dots=S.map((s,i)=>{const d=document.createElement('div');d.className='d';d.style.background=CH[s.ch][1];d.title=`${i+1}. ${s.x}`;d.onclick=()=>{stop();show(i)};chap.appendChild(d);return d});
+$('chleg').innerHTML=Object.values(CH).map(([l,c])=>`<span><i style="background:${c}"></i>${l}</span>`).join('');
+
+let idx=-1,playing=false,speed=1,timer=null,raf=null,token=0;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function render(i){
+  const s=S[i];
+  const cap=$('cap');cap.classList.remove('pop');void cap.offsetWidth;cap.classList.add('pop');
+  $('capE').textContent=s.e;$('capT').textContent=s.x;$('capN').textContent=`${i+1} / ${S.length}`;cap.style.borderColor=CH[s.ch][1];
+  const vs=viaScion(s.f,s.t);
+  for(const k in nodeEl){nodeEl[k].classList.toggle('on',k===s.f||k===s.t||(k==='scion'&&vs));nodeEl[k].classList.toggle('busy',(s.b||BUSY[s.p])===k)}
+  const b=s.b||BUSY[s.p],lk=BUSY[s.p];
+  sub.hub.textContent='🔒 '+(lk?N[lk].l.toLowerCase():'free');
+  sub.db.textContent='phase: '+s.p;
+  sub.gh.textContent=s.p==='start'||s.p==='merged'?'':'status:'+s.p;
+  // AI "thinking" wire for the busy agent
+  if(b){think.setAttribute('d',dOf(route(b,'anth')));think.setAttribute('opacity',.75)}else think.setAttribute('opacity',0);
+  const pi=PH.findIndex(p=>p[0]===s.p);
+  PH.forEach(([id],j)=>{phEl[id].classList.toggle('on',j===pi);phEl[id].classList.toggle('done',j<pi)});
+  rnd.textContent='●'.repeat(s.r||0)+'○'.repeat(3-(s.r||0));
+  dots.forEach((d,j)=>{d.classList.toggle('seen',j<=i);d.classList.toggle('cur',j===i)});
+  cur=AG.includes(s.t)||s.t==='rt'||s.t==='anth'||s.t==='rs'?s.t:(vs?'scion':s.t==='gh'&&s.f!=='you'?s.f:s.t);
+  if(!hover)card(cur);
+  const items=S.slice(0,i+1).filter(x=>x.feed);const feed=$('feed');const have=feed.querySelectorAll('.it').length;
+  if(items.length<have||have===0)feed.innerHTML=items.length?'':'<div class="empty">nothing yet…</div>';
+  items.slice(feed.querySelectorAll('.it').length).forEach(x=>{const d=document.createElement('div');d.className='it';d.style.borderLeftColor=CH[x.ch][1];d.innerHTML=x.feed;feed.appendChild(d)});
+  feed.parentElement.scrollTop=feed.parentElement.scrollHeight;
+}
+
+function travel(i,done){
+  const s=S[i],my=++token,col=s.col||CH[s.ch][1];
+  const pts=route(s.f,s.t).map(P);
+  live.setAttribute('d',dOf(pts));live.setAttribute('stroke',col);live.setAttribute('opacity',.9);
+  $('pkC').setAttribute('stroke',col);$('pkE').textContent=s.e;
+  const seg=[];let L=0;for(let j=1;j<pts.length;j++){const l=Math.hypot(pts[j][0]-pts[j-1][0],pts[j][1]-pts[j-1][1]);seg.push(l);L+=l}
+  const at=d=>{for(let j=0;j<seg.length;j++){if(d<=seg[j]||j===seg.length-1){const f=seg[j]?Math.min(1,d/seg[j]):1;
+      return [pts[j][0]+(pts[j+1][0]-pts[j][0])*f,pts[j][1]+(pts[j+1][1]-pts[j][1])*f]}d-=seg[j]}};
+  cancelAnimationFrame(raf);pk.setAttribute('opacity',1);
+  if(reduce){const [x,y]=at(L/2);pk.setAttribute('transform',`translate(${x},${y})`);done&&done();return}
+  const dur=Math.max(900,Math.min(2000,L*2.2))/speed,t0=performance.now();
+  (function step(now){if(my!==token)return;
+    const t=Math.min(1,(now-t0)/dur),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;const [x,y]=at(e*L);
+    pk.setAttribute('transform',`translate(${x},${y}) scale(${1+.15*Math.sin(Math.PI*t)})`);
+    if(t<1)raf=requestAnimationFrame(step);else done&&done();})(t0);
+}
+function show(i){
+  idx=Math.max(0,Math.min(S.length-1,i));render(idx);
+  travel(idx,()=>{if(playing){clearTimeout(timer);timer=setTimeout(()=>{if(idx<S.length-1)show(idx+1);else{playing=false;syncBtn()}},1500/speed)}});
+}
+function syncBtn(){$('bPlay').textContent=playing?'⏸ Pause':(idx>=S.length-1?'↺ Replay':'▶ Play')}
+function stop(){playing=false;clearTimeout(timer);syncBtn()}
+$('bPlay').onclick=()=>{if(playing){stop();return}playing=true;syncBtn();
+  if(idx>=S.length-1||idx<0){$('feed').innerHTML='';show(0)}else show(idx+1)};
+$('bNext').onclick=()=>{stop();show(idx+1);syncBtn()};
+$('bPrev').onclick=()=>{stop();show(idx-1);syncBtn()};
+$('bSpeed').onclick=()=>{speed=speed===1?2:speed===2?0.5:1;$('bSpeed').textContent=(speed===0.5?'½':speed)+'×'};
+document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
+  if(e.key===' '){e.preventDefault();$('bPlay').click()}if(e.key==='ArrowRight')$('bNext').click();if(e.key==='ArrowLeft')$('bPrev').click()});
+
+// idle frame, then autoplay once when scrolled into view
+rnd.textContent='○○○';phEl.start.classList.add('on');sub.hub.textContent='🔒 free';sub.db.textContent='phase: none';
+$('capE').textContent='▶️';$('capT').textContent='Press play (or the space bar) to watch a PR go from label to merge';
+if(!reduce){const ap=new IntersectionObserver(es=>{if(es[0].isIntersecting){ap.disconnect();if(idx<0)$('bPlay').click()}},{threshold:.4});ap.observe($('stage'))}
+</script>
+<script>
+/* ---------- CODE DEEP-DIVE PLAYER ---------- */
+(()=>{
+const NS='http://www.w3.org/2000/svg';
+const el=(t,a={},p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(p)p.appendChild(e);return e};
+const $=id=>document.getElementById(id);
+const LC={entry:'var(--human)',parse:'var(--gh)',act:'var(--scion)',decide:'var(--hub)',help:'var(--plan)',io:'var(--db)',ext:'var(--cl)'};
+const LS={entry:'var(--human-s)',parse:'var(--gh-s)',act:'var(--scion-s)',decide:'var(--hub-s)',help:'var(--plan-s)',io:'var(--db-s)',ext:'var(--zc)'};
+// Only interface functions (called from another module) are rows.
+const M={
+ main:{f:'__main__.py',x:15,y:20,w:200,L:'entry',tag:'⚡ loop',fns:['cmd_run']},
+ cmd:{f:'commands.py',x:15,y:93,w:200,L:'parse',tag:'✨ pure',fns:['parse_comment','parse_tagged_comment','needs_router','parse_review']},
+ rtr:{f:'router.py',x:15,y:208,w:200,L:'parse',tag:'✨ pure',fns:['wants','task','parse','to_event']},
+ mac:{f:'machine.py',x:15,y:344,w:200,L:'decide',tag:'✨ pure',fns:['decide']},
+ prm:{f:'prompts.py',x:15,y:417,w:200,L:'help',tag:'✨ pure',fns:['build']},
+ stk:{f:'sticky.py',x:15,y:490,w:200,L:'help',tag:'✨ pure',fns:['render']},
+ run:{f:'runner.py',x:290,y:20,w:180,hh:650,L:'act',tag:'⚡ all I/O',fns:['once']},
+ gh:{f:'github/client.py',x:545,y:20,w:215,L:'io',tag:'⚡ gh CLI',fns:['open_prs_with_label','comments_since','reviews','upsert_sticky','set_phase_label']},
+ sc:{f:'scion/client.py',x:545,y:177,w:215,L:'io',tag:'⚡ HTTP',fns:['dispatch','status','read_verdict','read_file','exec','stop']},
+ st:{f:'state.py',x:545,y:355,w:215,L:'io',tag:'⚡ sqlite3',fns:['load','save','claim','record','set_cursor','add_route','routes','drop_route']},
+ tel:{f:'telemetry.py',x:545,y:575,w:215,L:'io',tag:'⚡ OTLP',fns:['transition','dispatched','run_finished']},
+ GH:{f:'🐙 GitHub',x:830,y:62,w:155,L:'ext',tag:'',fns:['api|api.github.com']},
+ HUB:{f:'⚙️ Scion Hub',x:830,y:195,w:155,L:'ext',tag:'',fns:['api|REST :8080']},
+ CTR:{f:'🐳 container',x:830,y:275,w:155,L:'ext',tag:'',fns:['run|agent · Claude']},
+ DB:{f:'🗄️ SQLite file',x:830,y:430,w:155,L:'ext',tag:'',fns:['f|agent-hub.sqlite3']},
+ OT:{f:'📡 OTel collector',x:830,y:597,w:155,L:'ext',tag:'',fns:['api|OTLP :4318']},
+};
+const RH=21,HD=32;
+const fid=f=>f.split('|')[0],flab=f=>f.split('|')[1]||f+'()';
+const gM=$('cMods'),rowEl={},modEl={};
+el('text',{x:995,y:14,'font-size':11,'font-weight':700,'text-anchor':'end',class:'mute'},gM).textContent='☁️🐳 OUTSIDE THE PYTHON PROCESS';
+el('line',{x1:812,y1:22,x2:812,y2:680,stroke:'var(--line)','stroke-dasharray':'4 5','stroke-width':2},gM);
+for(const k in M){const m=M[k];m.h=m.hh||HD+m.fns.length*RH+6;const ext=m.L==='ext';
+  const g=el('g',{class:'mod'},gM);modEl[k]=g;
+  el('rect',{x:m.x,y:m.y,width:m.w,height:m.h,rx:12,fill:LS[m.L],stroke:LC[m.L],'stroke-width':2,...(ext?{'stroke-dasharray':'6 4'}:{})},g);
+  el('text',{x:m.x+10,y:m.y+21,'font-size':ext?13:14,'font-weight':700,'font-family':ext?'inherit':'ui-monospace,Menlo,monospace'},g).textContent=m.f;
+  if(m.tag)el('text',{x:m.x+m.w-8,y:m.y+21,'font-size':10.5,'text-anchor':'end',class:'mute'},g).textContent=m.tag;
+  m.fns.forEach((fn,i)=>{const r=el('g',{class:'fn'},g);const y=m.y+HD+i*RH;
+    el('rect',{x:m.x+5,y,width:m.w-10,height:RH-2,rx:5},r);
+    el('text',{x:m.x+14,y:y+14},r).textContent=flab(fn);rowEl[k+'.'+fid(fn)]=r;});
+}
+// runner's internals, named but not animated
+el('text',{x:380,y:112,'text-anchor':'middle','font-size':11,class:'mute'},gM).textContent='internals (hidden):';
+['_tracked_prs','_events_for','_new_comments','_start_route','_poll_route','_agent_events','_release','_apply','_do','_dispatch'].forEach((n,i)=>
+  el('text',{x:380,y:134+i*20,'text-anchor':'middle','font-size':11.5,'font-family':'ui-monospace,Menlo,monospace',class:'mute',opacity:.6},gM).textContent=n+'()');
+el('path',{d:`M830 ${M.HUB.y+M.HUB.h/2} C800 ${M.HUB.y+M.HUB.h/2} 800 ${M.CTR.y+M.CTR.h/2} 830 ${M.CTR.y+M.CTR.h/2}`,fill:'none',stroke:'var(--scion)','stroke-width':2,'stroke-dasharray':'3 4'},gM);
+
+const modOf=id=>id.split('.')[0];
+function anchor(id,hint){const [k,fn]=id.split('.');const m=M[k];const i=m.fns.findIndex(f=>fid(f)===fn);
+  const y=i>=0?m.y+HD+i*RH+(RH-2)/2:Math.max(m.y+HD+6,Math.min(m.y+m.h-12,hint??m.y+16));
+  return {l:m.x+(i>=0?5:0),r:m.x+m.w-(i>=0?5:0),y,k}}
+function pathD(a,b){const B0=anchor(b),A=anchor(a,B0.y),B=anchor(b,A.y);
+  if(M[A.k].x===M[B.k].x){const x=Math.min(A.l,B.l),dx=40;return `M${A.l} ${A.y} C${x-dx} ${A.y} ${x-dx} ${B.y} ${B.l} ${B.y}`}
+  if(M[B.k].x>M[A.k].x){const dx=Math.max(30,(B.l-A.r)/2);return `M${A.r} ${A.y} C${A.r+dx} ${A.y} ${B.l-dx} ${B.y} ${B.l} ${B.y}`}
+  const dx=Math.max(30,(A.l-B.r)/2);return `M${A.l} ${A.y} C${A.l-dx} ${A.y} ${B.r+dx} ${B.y} ${B.r} ${B.y}`}
+
+/* step builders: C=call, R=return, CR=call+return, N=note */
+const C=(a,b,d,x,o={})=>({k:'c',a,b,d,x,...o});
+const R=(a,b,d,x,o={})=>({k:'r',a,b,d,x,...o});
+const N=(a,x,o={})=>({k:'n',a,x,...o});
+const CR=(a,b,d,ret,x,xr,o={})=>[C(a,b,d,x,o),R(b,a,ret,xr||'',{c:o.c})];
+
+const SC=[
+{id:'approve',t:'💬 "plan approved" → developer starts',db:{phase:'plan-review',lock:'—',routes:'0'},ch:[['🔎 find PRs','var(--gh)'],['📥 collect events','var(--scion)'],['🧠 apply #1: the command','var(--hub)'],['🚀 apply #2: the heartbeat','var(--dev)']],S:[
+ C('main.cmd_run','run.once','','The loop calls once(), every 20 s',{c:0}),
+ C('run.once','run._tracked_prs','','Which PRs are ours?',{c:0}),
+ ...CR('run._tracked_prs','gh.open_prs_with_label','label="scion"','[Pr #1442]','Ask GitHub (gh CLI) for PRs with the label','',{c:0}),
+ R('run._tracked_prs','run.once','[Pr #1442]','One PR to look at',{c:0}),
+ C('run.once','run._events_for','Pr #1442','Collect everything new on this PR',{c:1}),
+ ...CR('run._events_for','st.load','o/r, 1442','State(plan-review)','Load its saved state','The plan is waiting for approval',{c:1}),
+ C('run._events_for','run._new_comments','1442','Any new comments?',{c:1}),
+ ...CR('run._new_comments','gh.comments_since','cursor','[CommentEvent]','Fetch comments since the last poll','"plan approved"',{c:1}),
+ ...CR('run._new_comments','st.claim','"comment:981"','True','Claim it, so it is handled exactly once','First time seen',{c:1}),
+ R('run._new_comments','run._events_for','[comment]','',{c:1}),
+ ...CR('run._events_for','cmd.parse_comment','"plan approved"','Command(approve-plan)','Tiers 1 and 2: slash commands and exact phrases','A known phrase. No AI needed',{c:1}),
+ ...CR('run._events_for','gh.reviews','1442','[]','Any submitted reviews?','',{c:1}),
+ C('run._events_for','run._route_events','','Any router answers waiting?',{c:1}),
+ ...CR('run._route_events','st.routes','1442','[]','','None',{c:1}),
+ R('run._route_events','run._events_for','[]','',{c:1}),
+ N('run._events_for','No agent holds the lock, so it adds a Tick() heartbeat',{c:1}),
+ R('run._events_for','run.once','[Command, Tick]','Two events, applied in order',{c:1}),
+ C('run.once','run._apply','Command(approve-plan)','Apply event 1',{c:2}),
+ ...CR('run._apply','st.load','','State(plan-review)','','',{c:2}),
+ C('run._apply','mac.decide','state, event','Ask the rulebook. Pure: no I/O at all',{c:2}),
+ ...CR('mac.decide','mac._command','approve-plan','Transition(dev-pending)','','Rule: approval → developer queued',{c:2}),
+ R('mac.decide','run._apply','Transition(dev-pending, [RenderSticky])','The decision, plus a list of actions',{c:2}),
+ ...CR('run._apply','st.record','event, transition','','Write it to the journal','',{c:2}),
+ ...CR('run._apply','tel.transition','plan-review → dev-pending','','Count it for Grafana','',{c:2}),
+ C('run._apply','run._do','RenderSticky','Carry out each action',{c:2}),
+ ...CR('run._do','stk.render','State(dev-pending)','markdown','Write the status comment text','',{c:2}),
+ ...CR('run._do','gh.upsert_sticky','markdown','','Edit the status comment on the PR','',{c:2}),
+ R('run._do','run._apply','State','',{c:2}),
+ ...CR('run._apply','gh.set_phase_label','"status:dev-pending"','','Update the label humans see','',{c:2}),
+ ...CR('run._apply','st.save','State(dev-pending)','','Save it. A crash from here on is safe','',{c:2,db:{phase:'dev-pending'}}),
+ R('run._apply','run.once','1','',{c:2}),
+ C('run.once','run._apply','Tick()','Apply event 2: the heartbeat',{c:3}),
+ ...CR('run._apply','st.load','','State(dev-pending)','Reload. It now says dev-pending','',{c:3}),
+ C('run._apply','mac.decide','state, Tick','',{c:3}),
+ ...CR('mac.decide','mac._tick','','Transition(dev-working)','','Rule: queued and no lock → start the developer',{c:3}),
+ R('mac.decide','run._apply','Transition(dev-working, [Dispatch(developer)])','',{c:3}),
+ C('run._apply','run._do','Dispatch(developer)','',{c:3}),
+ C('run._do','run._dispatch','','',{c:3}),
+ ...CR('run._dispatch','prm.build','developer, first-pass','task text','Write the task: PR, branch, plan path, rules','',{c:3}),
+ ...CR('run._dispatch','sc.dispatch','template=implementation-developer','agent_id','POST /api/v1/agents','A 🐳 container is starting',{c:3}),
+ ...CR('run._dispatch','st.set_cursor','agent_started','','Start the 45-min timer','',{c:3}),
+ ...CR('run._dispatch','tel.dispatched','','','','',{c:3}),
+ R('run._dispatch','run._do','State(🔒 agent-7f3)','The lock is taken 🔒',{c:3}),
+ R('run._do','run._apply','State','',{c:3}),
+ ...CR('run._apply','gh.set_phase_label','"status:dev-working"','','','',{c:3}),
+ ...CR('run._apply','st.save','State(dev-working, 🔒)','','Save phase and lock','',{c:3,db:{phase:'dev-working',lock:'agent-7f3'}}),
+ R('run._apply','run.once','1','',{c:3}),
+ R('run.once','main.cmd_run','2','Poll done → sleep 20 s',{c:3}),
+]},
+{id:'finish',t:'✅ developer finishes → reviewer queued',db:{phase:'dev-working',lock:'agent-7f3',routes:'0'},ch:[['🔎 find PRs','var(--gh)'],['📥 collect events','var(--scion)'],['🔍 read the container','var(--dev)'],['🧠 apply','var(--hub)']],S:[
+ C('main.cmd_run','run.once','','The loop calls once(), every 20 s',{c:0}),
+ C('run.once','run._tracked_prs','','',{c:0}),
+ ...CR('run._tracked_prs','gh.open_prs_with_label','label="scion"','[Pr #1442]','','',{c:0}),
+ R('run._tracked_prs','run.once','[Pr #1442]','',{c:0}),
+ C('run.once','run._events_for','Pr #1442','',{c:1}),
+ ...CR('run._events_for','st.load','o/r, 1442','State(dev-working, 🔒)','','An agent holds the lock',{c:1}),
+ C('run._events_for','run._new_comments','1442','',{c:1}),
+ ...CR('run._new_comments','gh.comments_since','cursor','[]','','Nobody said anything',{c:1}),
+ R('run._new_comments','run._events_for','[]','',{c:1}),
+ ...CR('run._events_for','gh.reviews','1442','[]','','',{c:1}),
+ C('run._events_for','run._route_events','','',{c:1}),
+ ...CR('run._route_events','st.routes','1442','[]','','',{c:1}),
+ R('run._route_events','run._events_for','[]','',{c:1}),
+ C('run._events_for','run._agent_events','agent-7f3','The lock is held: has that agent finished?',{c:2}),
+ ...CR('run._agent_events','sc.status','agent-7f3','activity=completed','Ask Scion how the container is doing','',{c:2}),
+ ...CR('run._agent_events','sc.read_verdict','agent-7f3','{decision: approved}','cat verdict.json inside the container','The agent says it is done',{c:2}),
+ C('run._agent_events','run._release','agent-7f3','Finish with it',{c:2}),
+ ...CR('run._release','sc.exec','usage script','token counts','Read tokens and cost before the container goes','',{c:2}),
+ ...CR('run._release','sc.stop','agent-7f3','','Stop it, don\'t delete it: the logs stay inspectable','',{c:2}),
+ ...CR('run._release','st.set_cursor','agent_started = ""','','Clear the timer','',{c:2}),
+ R('run._release','run._agent_events','','',{c:2}),
+ R('run._agent_events','run._events_for','[AgentFinished(developer)]','',{c:2}),
+ N('run._events_for','The lock was held when state was loaded, so no Tick this poll',{c:2}),
+ R('run._events_for','run.once','[AgentFinished]','',{c:2}),
+ C('run.once','run._apply','AgentFinished(developer)','',{c:3}),
+ ...CR('run._apply','st.load','','State(dev-working)','','',{c:3}),
+ C('run._apply','mac.decide','state, event','',{c:3}),
+ ...CR('mac.decide','mac._finished','developer','Transition(review-pending)','','Rule: developer done → reviewer queued',{c:3}),
+ R('mac.decide','run._apply','Transition(review-pending, [RenderSticky])','',{c:3}),
+ ...CR('run._apply','st.record','','','','',{c:3}),
+ ...CR('run._apply','tel.run_finished','duration, tokens, cost','','A span plus cost for Grafana (via _record_outcome)','',{c:3}),
+ C('run._apply','run._do','RenderSticky','',{c:3}),
+ ...CR('run._do','stk.render','State(review-pending)','markdown','','',{c:3}),
+ ...CR('run._do','gh.upsert_sticky','markdown','','','',{c:3}),
+ R('run._do','run._apply','State','',{c:3}),
+ ...CR('run._apply','gh.set_phase_label','"status:review-pending"','','','',{c:3}),
+ ...CR('run._apply','st.save','State(review-pending)','','Lock released, reviewer queued','',{c:3,db:{phase:'review-pending',lock:'—'}}),
+ R('run._apply','run.once','1','',{c:3}),
+ R('run.once','main.cmd_run','1','Poll done → sleep 20 s',{c:3}),
+ N('main.cmd_run','Next poll: Tick → _tick → Dispatch(reviewer), the same path as story 1',{c:3}),
+]},
+{id:'router',t:'🧭 prose comment → router container → plan revised',db:{phase:'plan-review',lock:'—',routes:'0'},ch:[['📥 poll 1: spot prose','var(--gh)'],['🚀 start the router','var(--llm)'],['⏳ poll 2: read its verdict','var(--rev)'],['🧠 apply','var(--hub)']],S:[
+ C('main.cmd_run','run.once','','Poll 1',{c:0}),
+ C('run.once','run._events_for','Pr #1442','(_tracked_prs found it, as in story 1)',{c:0}),
+ ...CR('run._events_for','st.load','o/r, 1442','State(plan-review)','','',{c:0}),
+ C('run._events_for','run._new_comments','1442','',{c:0}),
+ ...CR('run._new_comments','gh.comments_since','cursor','[CommentEvent]','','"use consumer_id as the dist key?"',{c:0}),
+ ...CR('run._new_comments','st.claim','"comment:982"','True','','',{c:0}),
+ R('run._new_comments','run._events_for','[comment]','',{c:0}),
+ ...CR('run._events_for','cmd.parse_comment','"use consumer_id…"','None','','No slash command, no known phrase',{c:0}),
+ ...CR('run._events_for','cmd.parse_tagged_comment','"use consumer_id…"','None','','No @developer / @reviewer tag',{c:0}),
+ ...CR('run._events_for','cmd.needs_router','"use consumer_id…"','True','','Prose from a human: worth asking the router',{c:0}),
+ C('run._events_for','run._start_route','body, phase','Hand it to a router agent',{c:1}),
+ ...CR('run._start_route','rtr.wants','body','True','','',{c:1}),
+ ...CR('run._start_route','rtr.task','body, plan-review','prompt','Comment + phase + allowed commands + rules','',{c:1}),
+ ...CR('run._start_route','sc.dispatch','template=comment-router','router_id','A 🐳 Haiku container starts. No lock taken','',{c:1}),
+ ...CR('run._start_route','st.add_route','Route(phase=plan-review)','','Remember what was asked, and in which phase','',{c:1,db:{routes:'1'}}),
+ ...CR('run._start_route','tel.dispatched','router','','','',{c:1}),
+ R('run._start_route','run._events_for','True','',{c:1}),
+ C('run._events_for','run._route_events','','',{c:1}),
+ ...CR('run._route_events','st.routes','1442','[Route]','','The one just added',{c:1}),
+ C('run._route_events','run._poll_route','Route','',{c:1}),
+ ...CR('run._poll_route','sc.read_file','verdict.json','None','','Just started: no answer yet',{c:1}),
+ ...CR('run._poll_route','sc.status','router_id','running','Not finished, not timed out','',{c:1}),
+ R('run._poll_route','run._route_events','(not done)','Ask again next poll',{c:1}),
+ R('run._route_events','run._events_for','[]','',{c:1}),
+ R('run._events_for','run.once','[Tick]','',{c:1}),
+ C('run.once','run._apply','Tick()','',{c:1}),
+ ...CR('run._apply','st.load','','State(plan-review)','','',{c:1}),
+ C('run._apply','mac.decide','state, Tick','',{c:1}),
+ ...CR('mac.decide','mac._tick','','ignored','','"nothing to do in plan-review"',{c:1}),
+ R('mac.decide','run._apply','Transition(ignored)','',{c:1}),
+ ...CR('run._apply','st.record','','','Journal it anyway','',{c:1}),
+ R('run._apply','run.once','0','Ignored: nothing saved, nothing sent',{c:1}),
+ R('run.once','main.cmd_run','0','Sleep 20 s. The router is thinking in its container',{c:1}),
+ C('main.cmd_run','run.once','','Poll 2',{c:2}),
+ C('run.once','run._events_for','Pr #1442','',{c:2}),
+ ...CR('run._events_for','st.load','','State(plan-review)','','',{c:2}),
+ N('run._events_for','No new comments or reviews this time',{c:2}),
+ C('run._events_for','run._route_events','','',{c:2}),
+ ...CR('run._route_events','st.routes','1442','[Route]','','',{c:2}),
+ C('run._route_events','run._poll_route','Route','',{c:2}),
+ ...CR('run._poll_route','sc.read_file','verdict.json','{"command":"update-plan",…}','','The answer is there',{c:2}),
+ ...CR('run._poll_route','rtr.parse','raw, source','Verdict(update-plan, high)','Guardrails: only known commands survive','',{c:2}),
+ C('run._poll_route','run._finish_route','','',{c:2}),
+ ...CR('run._finish_route','tel.run_finished','router cost','','','',{c:2}),
+ ...CR('run._finish_route','sc.stop','router_id','','','',{c:2}),
+ R('run._finish_route','run._poll_route','','',{c:2}),
+ N('run._poll_route','Phase is still plan-review, so the verdict is not stale',{c:2}),
+ ...CR('run._poll_route','rtr.to_event','Verdict','Command(update-plan)','','',{c:2}),
+ R('run._poll_route','run._route_events','(done, Command)','',{c:2}),
+ ...CR('run._route_events','st.drop_route','router_id','','','',{c:2,db:{routes:'0'}}),
+ R('run._route_events','run._events_for','[Command(update-plan)]','',{c:2}),
+ R('run._events_for','run.once','[Command, Tick]','',{c:2}),
+ C('run.once','run._apply','Command(update-plan)','',{c:3}),
+ ...CR('run._apply','st.load','','State(plan-review)','','',{c:3}),
+ C('run._apply','mac.decide','state, event','',{c:3}),
+ ...CR('mac.decide','mac._command','update-plan','Transition(plan-working)','','Rule: revise the plan',{c:3}),
+ R('mac.decide','run._apply','Transition(plan-working, [Dispatch(planner), RenderSticky])','',{c:3}),
+ C('run._apply','run._do','Dispatch(planner)','',{c:3}),
+ C('run._do','run._dispatch','','',{c:3}),
+ ...CR('run._dispatch','prm.build','planner, revision','task text','','',{c:3}),
+ ...CR('run._dispatch','sc.dispatch','template=implementation-planner','agent_id','','',{c:3}),
+ R('run._dispatch','run._do','State(🔒 planner)','',{c:3}),
+ R('run._do','run._apply','State','',{c:3}),
+ N('run._apply','…then RenderSticky and the label, as in story 1',{c:3}),
+ ...CR('run._apply','st.save','State(plan-working, 🔒)','','','',{c:3,db:{phase:'plan-working',lock:'agent-9c1'}}),
+ R('run._apply','run.once','1','',{c:3}),
+ N('run.once','Then Tick: the planner holds the lock, so it is ignored',{c:3}),
+ R('run.once','main.cmd_run','1','Poll done → sleep 20 s',{c:3}),
+]},
+];
+
+// What each adapter call does on the wire: [external, request, reply?]
+const HUBX=(cmd,reply)=>[['HUB.api','POST /agents/:id/exec'],['CTR.run',cmd,reply]];
+const OTLP=p=>[['OT.api','POST '+p,'fire & forget']];
+const SQL=q=>[['DB.f',q]];
+const WIRE={
+ 'gh.open_prs_with_label':[['GH.api','gh pr list --label scion']],
+ 'gh.comments_since':[['GH.api','GET issues/comments?since=…']],
+ 'gh.reviews':[['GH.api','GET pulls/1442/reviews']],
+ 'gh.upsert_sticky':[['GH.api','PATCH issues/comments/:id','200']],
+ 'gh.set_phase_label':[['GH.api','DELETE old label · POST new','200']],
+ 'sc.dispatch':[['HUB.api','POST /api/v1/agents'],['CTR.run','create + start','started']],
+ 'sc.status':[['HUB.api','GET /api/v1/agents/:id']],
+ 'sc.read_verdict':HUBX('cat verdict.json'),
+ 'sc.read_file':HUBX('cat verdict.json'),
+ 'sc.exec':HUBX('python3 usage script'),
+ 'sc.stop':[['HUB.api','POST /agents/:id/stop'],['CTR.run','stop','stopped']],
+ 'st.load':SQL('SELECT … FROM pr_state'),'st.save':SQL('UPSERT pr_state'),'st.claim':SQL('INSERT INTO handled'),
+ 'st.record':SQL('INSERT INTO journal'),'st.set_cursor':SQL('UPSERT cursors'),'st.add_route':SQL('INSERT pending_routes'),
+ 'st.routes':SQL('SELECT pending_routes'),'st.drop_route':SQL('DELETE pending_routes'),
+ 'tel.transition':OTLP('/v1/metrics'),'tel.dispatched':OTLP('/v1/metrics'),'tel.run_finished':OTLP('/v1/traces'),
+};
+// Keep only calls that cross a module boundary; add the hop to the outside world.
+function iface(S){const out=[];S.forEach((s,j)=>{
+  if(s.k!=='n'&&modOf(s.a)===modOf(s.b))return;
+  out.push(s);
+  if(s.k!=='c'||!WIRE[s.b])return;
+  const ret=S.slice(j+1).find(x=>x.k==='r'&&x.a===s.b),hops=WIRE[s.b];let prev=s.b;
+  hops.forEach(h=>{out.push({k:'c',a:prev,b:h[0],d:h[1],x:'',c:s.c});prev=h[0]});
+  for(let q=hops.length-1;q>=0;q--)out.push({k:'r',a:hops[q][0],b:q?hops[q-1][0]:s.b,d:hops[q][2]||(ret&&ret.d)||'ok',x:'',c:s.c});
+});return out}
+SC.forEach(s=>s.S=iface(s.S));
+
+let sc=0,idx=-1,playing=false,speed=1,timer=null,raf=null,token=0,dbPrev={};
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const live=$('cLive'),pk=$('cPk');
+const tabs=$('cTabs');
+SC.forEach((s,i)=>{const b=document.createElement('button');b.textContent=s.t;b.onclick=()=>pick(i);tabs.appendChild(b)});
+
+function modColor(id){return LC[M[id.split('.')[0]].L]}
+function stackAt(i){const S=SC[sc].S;const st=['main.cmd_run'];for(let j=0;j<=i;j++){const s=S[j];if(s.k==='c')st.push(s.b);else if(s.k==='r')st.pop()}return st}
+function dbAt(i){const S=SC[sc].S;const d={...SC[sc].db};for(let j=0;j<=i;j++)Object.assign(d,S[j].db||{});return d}
+
+function pick(i){stop();sc=i;idx=-1;[...tabs.children].forEach((b,j)=>b.classList.toggle('on',j===i));
+  const S=SC[sc].S;const chap=$('cChap');chap.innerHTML='';
+  S.forEach((s,j)=>{const d=document.createElement('div');d.className='d';d.style.background=SC[sc].ch[s.c][1];d.title=`${j+1}. ${s.x||s.b||s.a}`;d.onclick=()=>{stop();show(j)};chap.appendChild(d)});
+  $('cChleg').innerHTML=SC[sc].ch.map(([l,c])=>`<span><i style="background:${c}"></i>${l}</span>`).join('');
+  $('cCapE').textContent='🔬';$('cCapT').textContent='Press play to step through: '+SC[sc].t;$('cCapN').textContent='';
+  for(const k in rowEl)rowEl[k].classList.remove('stk','cur');for(const k in modEl)modEl[k].classList.remove('on');
+  live.setAttribute('opacity',0);pk.setAttribute('opacity',0);dbPrev={};renderStack(['main.cmd_run']);renderDb(SC[sc].db);$('cData').textContent='—';syncBtn();}
+
+const lbl=id=>{const [k,fn]=id.split('.');const m=M[k];const row=m.fns.find(f=>fid(f)===fn);
+  if(m.L==='ext')return m.f;return row?`${m.f.replace('.py','').replace('/client','')}.${fn}()`:m.f};
+function renderStack(st){$('cStack').innerHTML=st.slice().reverse().map(f=>{const [k,fn]=f.split('.');const m=M[k];
+  const name=m.L==='ext'?m.f:`<code>${fn}()</code>`;const where=m.L==='ext'?flab(m.fns[0]):m.f;
+  return `<div class="frame" style="border-left-color:${modColor(f)}">${name}<small>${where}</small></div>`}).join('')}
+function renderDb(d){$('cDb').innerHTML=[['phase',d.phase],['🔒 lock',d.lock],['⏳ routes',d.routes]].map(([l,v])=>{
+  const key=l;const chg=dbPrev[key]!==undefined&&dbPrev[key]!==v;dbPrev[key]=v;
+  return `<div class="dbrow"><b>${l}</b><span class="${chg?'chg':''}">${v}</span></div>`}).join('')}
+
+function render(i){const s=SC[sc].S[i];const cap=$('cCap');cap.classList.remove('pop');void cap.offsetWidth;cap.classList.add('pop');
+  const head=s.k==='c'?`${lbl(s.a)} → ${lbl(s.b)}`:s.k==='r'?`${lbl(s.a)} ↩ ${lbl(s.b)}`:lbl(s.a);
+  const ext=M[modOf(s.b||s.a)].L==='ext'||M[modOf(s.a)].L==='ext';
+  $('cCapE').textContent=s.k==='n'?'💭':ext?'🌐':s.k==='c'?'📞':'↩️';
+  $('cCapT').innerHTML=`<code>${head}</code>${s.x?' · '+s.x:''}`;$('cCapN').textContent=`${i+1} / ${SC[sc].S.length}`;
+  cap.style.borderColor=SC[sc].ch[s.c][1];
+  const st=stackAt(i);const top=st[st.length-1];
+  for(const k in rowEl){rowEl[k].classList.toggle('stk',st.includes(k));rowEl[k].classList.toggle('cur',k===top)}
+  const act=new Set([s.a.split('.')[0],(s.b||s.a).split('.')[0]]);for(const k in modEl)modEl[k].classList.toggle('on',act.has(k));
+  renderStack(st);renderDb(dbAt(i));
+  if(s.d)$('cData').textContent=(s.k==='r'?'returned  ':'passed  ')+s.d;
+  [...$('cChap').children].forEach((d,j)=>{d.classList.toggle('seen',j<=i);d.classList.toggle('cur',j===i)});
+}
+function travel(i,done){const s=SC[sc].S[i],my=++token;
+  if(s.k==='n'){live.setAttribute('opacity',0);pk.setAttribute('opacity',0);done&&setTimeout(done,500/speed);return}
+  const col=s.k==='c'?modColor(s.b):modColor(s.a);
+  live.setAttribute('d',pathD(s.a,s.b));live.setAttribute('stroke',col);live.setAttribute('class',s.k==='c'?'call':'ret');live.setAttribute('opacity',.85);
+  const label=s.d||(s.k==='c'?'( )':'None');$('cPkT').textContent=label.length>34?label.slice(0,33)+'…':label;
+  const w=$('cPkT').getComputedTextLength()+18;const r=$('cPkR');r.setAttribute('width',w);r.setAttribute('x',-w/2);r.setAttribute('fill','var(--card)');r.setAttribute('stroke',col);
+  const L=live.getTotalLength();pk.setAttribute('opacity',1);cancelAnimationFrame(raf);
+  if(reduce){const p=live.getPointAtLength(L/2);pk.setAttribute('transform',`translate(${p.x},${p.y})`);done&&done();return}
+  const dur=Math.max(550,Math.min(1200,L*2))/speed,t0=performance.now();
+  (function step(now){if(my!==token)return;const t=Math.min(1,(now-t0)/dur),e=t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+    const p=live.getPointAtLength(e*L);pk.setAttribute('transform',`translate(${p.x},${p.y})`);
+    if(t<1)raf=requestAnimationFrame(step);else done&&done();})(t0);
+}
+function show(i){const S=SC[sc].S;idx=Math.max(0,Math.min(S.length-1,i));render(idx);
+  travel(idx,()=>{if(playing){clearTimeout(timer);const s=S[idx];const hold=(s.x?1200:450)/speed;
+    timer=setTimeout(()=>{if(idx<S.length-1)show(idx+1);else{playing=false;syncBtn()}},hold)}});}
+function syncBtn(){$('cPlay').textContent=playing?'⏸ Pause':(idx>=SC[sc].S.length-1?'↺ Replay':'▶ Play')}
+function stop(){playing=false;clearTimeout(timer);syncBtn()}
+$('cPlay').onclick=()=>{if(playing){stop();return}playing=true;syncBtn();if(idx>=SC[sc].S.length-1||idx<0){dbPrev={};show(0)}else show(idx+1)};
+$('cNext').onclick=()=>{stop();show(idx+1);syncBtn()};
+$('cPrev').onclick=()=>{stop();show(idx-1);syncBtn()};
+$('cSpeed').onclick=()=>{speed=speed===1?2:speed===2?0.5:1;$('cSpeed').textContent=(speed===0.5?'½':speed)+'×'};
+pick(0);
+// sanity: every return must pop the frame it names
+SC.forEach(s=>{const st=['main.cmd_run'];s.S.forEach((x,j)=>{if(x.k==='c')st.push(x.b);else if(x.k==='r'){const t=st.pop();if(t!==x.a||modOf(st[st.length-1])!==modOf(x.b))console.warn('stack mismatch',s.id,j,x,t)}})});
+})();
+</script>
+</body>
+</html>
