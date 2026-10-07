@@ -1,0 +1,163 @@
+#!/usr/bin/env bash
+# ve-manim — the visual-explain plugin's wrapper around 3b1b manim (manimgl).
+#
+#   ve-manim status [--quiet]          exit 0 when the renderer is installed and passed its render check
+#   ve-manim doctor                    print the full environment report
+#   ve-manim install [--background] [--force]
+#   ve-manim autoinstall               (SessionStart hook) background install, with back-off on failures
+#   ve-manim new <dir>                 scaffold a film project: <dir>/scenes/{common.py,custom_config.yml,s1_example.py}
+#   ve-manim render <dir> <file.py> [Scene ...] [--draft|--hd|--4k]   (no Scene = every scene in the file)
+#   ve-manim frames <dir> <Scene> <t1,t2,...>    PNG frames in <dir>/frames/
+#   ve-manim sheet  <dir> <Scene> [n]            one contact-sheet PNG of n frames (default 6) for review
+#   ve-manim embed  <page.html> [out.html] [--external]   inline vid:/poster: placeholders
+#   ve-manim python                    print the venv's python path
+#
+# Where things live: $VE_DATA (default: the plugin data dir, else ~/.local/share/visual-explain)
+#   $VE_DATA/ve-manim-venv/   isolated venv with manimgl + a bundled ffmpeg
+#   $VE_DATA/install.log      installer log
+set -uo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SPEC_DEFAULT="manimgl==1.7.2"
+
+resolve_data() {
+  if [ -n "${VE_DATA:-}" ]; then echo "$VE_DATA"; return; fi
+  if [ -n "${CLAUDE_PLUGIN_DATA:-}" ]; then echo "$CLAUDE_PLUGIN_DATA"; return; fi
+  local m
+  for m in "$HOME"/.claude/plugins/data/*/ve-manim-venv/.ve-installed; do
+    [ -f "$m" ] && { dirname "$(dirname "$m")"; return; }
+  done
+  echo "$HOME/.local/share/visual-explain"
+}
+
+DATA="$(resolve_data)"
+VENV="$DATA/ve-manim-venv"
+MARK="$VENV/.ve-installed"
+LOCK="$DATA/.install.lock"
+LOG="$DATA/install.log"
+SPEC="${VE_MANIMGL_SPEC:-$SPEC_DEFAULT}"
+
+die() { echo "ve-manim: $*" >&2; exit 1; }
+mark_get() { [ -f "$MARK" ] && sed -n "s/^$1=//p" "$MARK" | head -1; }
+installing() { [ -d "$LOCK" ] && [ -z "$(find "$LOCK" -maxdepth 0 -mmin +30 2>/dev/null)" ]; }
+ready() { [ -x "$VENV/bin/manimgl" ] && [ "$(mark_get spec)" = "$SPEC" ] && [ "$(mark_get render)" = "ok" ]; }
+need_ready() {
+  ready && return 0
+  if installing; then die "manim is still installing in the background (log: $LOG). Wait, then retry."; fi
+  die "manim is not installed. Ask the user, then run: $0 install   (details: $0 doctor)"
+}
+venv_env() { export PATH="$VENV/bin:$PATH"; }
+tools() { venv_env; VE_FFMPEG="$VENV/bin/ffmpeg" "$VENV/bin/python" "$HERE/vetools.py" "$@"; }
+
+cmd_status() {
+  local quiet=0; [ "${1:-}" = "--quiet" ] && quiet=1
+  if ready; then [ $quiet = 1 ] || echo "ready · $(mark_get spec) · python $(mark_get python) · $VENV"; return 0; fi
+  if [ $quiet = 0 ]; then
+    if installing; then echo "installing (log: $LOG)";
+    elif [ -f "$MARK" ]; then echo "installed but not usable: render=$(mark_get render) spec=$(mark_get spec) (want $SPEC). Run: $0 doctor";
+    else echo "not installed (run: $0 install)"; fi
+  fi
+  return 1
+}
+
+cmd_doctor() {
+  echo "data dir     : $DATA"
+  echo "venv         : $VENV $( [ -d "$VENV" ] && echo '(exists)' || echo '(missing)')"
+  echo "wanted spec  : $SPEC"
+  if [ -f "$MARK" ]; then
+    echo "installed    : spec=$(mark_get spec) python=$(mark_get python) via=$(mark_get via) at=$(mark_get date)"
+    echo "render check : $(mark_get render)"
+  fi
+  installing && echo "status       : INSTALLING in background (lock: $LOCK)"
+  ready && echo "status       : READY" || { installing || echo "status       : NOT READY"; }
+  echo "ffmpeg       : $( [ -x "$VENV/bin/ffmpeg" ] && "$VENV/bin/ffmpeg" -version 2>/dev/null | head -1 || echo missing)"
+  echo "LaTeX        : $(command -v latex >/dev/null && echo "yes ($(command -v latex)) — Tex/TexText usable" || echo 'no — avoid Tex, TexText, Brace, BraceLabel, Matrix')"
+  echo "uv           : $(command -v uv || ls "$HOME/.local/bin/uv" 2>/dev/null || echo none)"
+  if [ -x "$VENV/bin/python" ]; then
+    echo "fonts        : $("$VENV/bin/python" - <<'EOF' 2>/dev/null
+import manimpango
+want = ["Avenir Next", "Helvetica Neue", "SF Pro Text", "Inter", "DejaVu Sans", "Noto Sans", "Menlo", "SF Mono", "JetBrains Mono", "DejaVu Sans Mono"]
+have = set(manimpango.list_fonts())
+print(", ".join(f for f in want if f in have) or "none of the preferred fonts")
+EOF
+)"
+  fi
+  [ "${VE_WRAP:-}" ] && echo "render wrap  : $VE_WRAP"
+  if [ -f "$LOG" ]; then echo "--- last lines of $LOG"; tail -n 8 "$LOG"; fi
+}
+
+cmd_install() {
+  local bg=0 force=0
+  for a in "$@"; do case "$a" in --background) bg=1;; --force) force=1;; *) die "unknown flag $a";; esac; done
+  if ready && [ $force = 0 ]; then echo "already installed: $(mark_get spec) in $VENV"; return 0; fi
+  mkdir -p "$DATA"
+  if [ $bg = 1 ]; then
+    VE_FORCE=$force nohup bash "$HERE/install.sh" "$DATA" "$SPEC" </dev/null >>"$LOG" 2>&1 &
+    echo "installing in background (pid $!, log: $LOG)"
+  else
+    VE_FORCE=$force bash "$HERE/install.sh" "$DATA" "$SPEC" 2>&1 | tee -a "$LOG"
+    return "${PIPESTATUS[0]}"
+  fi
+}
+
+cmd_autoinstall() {
+  [ "${VE_AUTO_INSTALL:-1}" = "0" ] && return 0
+  ready && return 0
+  installing && return 0
+  # this version was already tried and is unusable: don't reinstall every session, see `ve-manim doctor`
+  [ -f "$MARK" ] && [ "$(mark_get spec)" = "$SPEC" ] && return 0
+  # an attempt that never finished (network, missing python): retry at most once a day
+  [ -f "$DATA/.last-attempt" ] && [ -n "$(find "$DATA/.last-attempt" -mtime -1 2>/dev/null)" ] && return 0
+  cmd_install --background >/dev/null 2>&1
+}
+
+cmd_new() {
+  local dir="${1:-}"; [ -n "$dir" ] || die "usage: ve-manim new <dir>"
+  mkdir -p "$dir/scenes" "$dir/frames"
+  local f
+  for f in common.py custom_config.yml s1_example.py; do
+    if [ -e "$dir/scenes/$f" ]; then echo "keep   $dir/scenes/$f"; else cp "$HERE/template/$f" "$dir/scenes/$f"; echo "create $dir/scenes/$f"; fi
+  done
+}
+
+cmd_render() {
+  need_ready
+  local dir="${1:-}" file="${2:-}"; shift 2 2>/dev/null || die "usage: ve-manim render <dir> <file.py> [Scene ...] [--draft|--hd|--4k]"
+  local q="-l" scenes=() a
+  for a in "$@"; do case "$a" in --draft) q="-l";; --720) q="-m";; --hd) q="--hd";; --4k) q="--uhd";; -*) die "unknown flag $a";; *) scenes+=("$a");; esac; done
+  [ -f "$dir/scenes/$file" ] || die "no such scene file: $dir/scenes/$file"
+  local all=(); [ ${#scenes[@]} -eq 0 ] && all=(-a)
+  local log="$dir/scenes/.last-render.log" stamp="$dir/scenes/.render-start"
+  touch "$stamp"; sleep 1
+  ( cd "$dir/scenes" && venv_env && export PYTHONPATH="$PWD${PYTHONPATH:+:$PYTHONPATH}" &&
+    ${VE_WRAP:-} manimgl "$file" ${scenes[@]+"${scenes[@]}"} ${all[@]+"${all[@]}"} -w "$q" ) >"$log" 2>&1
+  local rc=$?
+  if [ $rc -ne 0 ] || grep -q "Traceback" "$log"; then
+    echo "render FAILED (exit $rc). Last lines of $log:"
+    tr '\r' '\n' <"$log" | grep -v -E 'it/s|it \[|^\s*$|RuntimeWarning|warn\("Couldn' | tail -30
+    return 1
+  fi
+  local v n=0
+  while IFS= read -r v; do n=$((n+1)); echo "video: $v ($(du -h "$v" | cut -f1 | tr -d ' '))"; done \
+    < <(find "$dir/scenes/videos" -name '*.mp4' -newer "$stamp" 2>/dev/null | sort)
+  [ $n -gt 0 ] || { echo "render produced no video. Log: $log"; return 1; }
+}
+
+cmd_frames() { need_ready; tools frames "$@"; }
+cmd_sheet()  { need_ready; tools sheet "$@"; }
+cmd_embed()  { need_ready; tools embed "$@"; }
+
+case "${1:-}" in
+  status) shift; cmd_status "$@";;
+  doctor) shift; cmd_doctor;;
+  install) shift; cmd_install "$@";;
+  autoinstall) shift; cmd_autoinstall;;
+  new) shift; cmd_new "$@";;
+  render) shift; cmd_render "$@";;
+  frames) shift; cmd_frames "$@";;
+  sheet) shift; cmd_sheet "$@";;
+  embed) shift; cmd_embed "$@";;
+  python) echo "$VENV/bin/python";;
+  ""|-h|--help|help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//';;
+  *) die "unknown command: $1 (try --help)";;
+esac

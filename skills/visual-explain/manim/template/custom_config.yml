@@ -1,0 +1,4 @@
+# Read by manimgl from the working directory (ve-manim render runs inside scenes/).
+camera:
+  background_color: "#0f1420"
+  fps: 30

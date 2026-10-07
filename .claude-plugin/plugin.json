@@ -1,0 +1,11 @@
+{
+  "name": "visual-explain",
+  "displayName": "Visual Explain",
+  "version": "0.1.0",
+  "description": "Explain any codebase, system, paper or concept as one self-contained HTML page of diagrams and animations. Optional 3b1b manim films, rendered only when you ask; the renderer installs itself in the background.",
+  "author": {
+    "name": "Eknid Mucollari"
+  },
+  "license": "MIT",
+  "keywords": ["explain", "diagrams", "animation", "html", "visualization", "manim", "3b1b"]
+}

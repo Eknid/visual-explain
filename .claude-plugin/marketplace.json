@@ -1,0 +1,14 @@
+{
+  "name": "visual-explain-local",
+  "description": "Local marketplace for the visual-explain plugin",
+  "owner": {
+    "name": "Eknid Mucollari"
+  },
+  "plugins": [
+    {
+      "name": "visual-explain",
+      "description": "Explain anything as a self-contained HTML page of diagrams and animations, with optional 3b1b manim films.",
+      "source": "./"
+    }
+  ]
+}

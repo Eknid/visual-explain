@@ -1,0 +1,67 @@
+<!--
+  Film block for visual-explain pages. Copy the three parts into the page:
+    1. the CSS into the page's <style> (it uses the page tokens --bg --card --ink --mute --line)
+    2. one <section> per film, with src="vid:<SceneClass>" and poster="poster:<SceneClass>"
+    3. the <script> once, before </body>
+  Then run:  ve-manim embed page.html index.html   (inlines every film as base64)
+
+  Why no native `controls`: the browser's control bar covers the caption burned into the
+  bottom of every film. The custom bar sits under the video instead.
+  Behaviour: plays muted when ≥60% visible, pauses when scrolled away, one film at a time,
+  a user pause disables autoplay for that film, no autoplay under prefers-reduced-motion.
+-->
+
+<!-- 1. CSS -->
+<style>
+.film{position:relative;border-radius:14px;overflow:hidden;background:#0f1420;border:1px solid var(--line);aspect-ratio:16/9}
+.film video{width:100%;height:100%;display:block;cursor:pointer}
+.vbar{display:flex;align-items:center;gap:8px;margin-top:8px}
+.vbar button{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:15px;cursor:pointer;min-width:44px}
+.vbar button.vp{background:var(--ink);color:var(--card);border-color:var(--ink);font-weight:700;min-width:86px}
+.vbar input[type=range]{flex:1;min-width:80px;accent-color:var(--ink)}
+.vbar .vt{font-variant-numeric:tabular-nums;color:var(--mute);font-size:13px;min-width:84px;text-align:right}
+.facts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.fact{border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:13px;background:var(--bg)}
+</style>
+
+<!-- 2. one section per film -->
+<section id="f1" class="reveal">
+  <h2><span class="n">1</span> Scan versus look up</h2>
+  <div class="film"><video data-film src="vid:S1Example" poster="poster:S1Example" muted playsinline preload="auto"></video></div>
+  <div class="facts"><span class="fact">🔎 scan: 8 reads</span><span class="fact">🗂️ index: 1 read</span></div>
+  <p class="tip">💡 One sentence: the single insight of this film.</p>
+</section>
+
+<!-- 3. JS -->
+<script>
+(()=>{
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const films=[...document.querySelectorAll('video[data-film]')];
+  const fmt=t=>isFinite(t)?Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0'):'0:00';
+  const pauseOthers=v=>films.forEach(o=>{if(o!==v&&!o.paused){o.dataset.sys='1';o.pause();delete o.dataset.sys}});
+  films.forEach(v=>{
+    v.dataset.auto='1';
+    v.addEventListener('pause',()=>{if(!v.dataset.sys)v.dataset.auto='0'});
+    const bar=document.createElement('div');bar.className='vbar';
+    bar.innerHTML='<button class="vp">▶ Play</button><input class="vr" type="range" min="0" max="1000" value="0" aria-label="Seek"><span class="vt">0:00</span><button class="vs" aria-label="Speed">1×</button><button class="vf" aria-label="Full screen">⛶</button>';
+    v.parentElement.after(bar);
+    const [bp,br,bt,bs,bf]=['.vp','.vr','.vt','.vs','.vf'].map(q=>bar.querySelector(q));
+    const sync=()=>{bp.textContent=v.ended?'↺ Replay':v.paused?'▶ Play':'⏸ Pause'};
+    const tick=()=>{if(v.duration)br.value=Math.round(1000*v.currentTime/v.duration);bt.textContent=fmt(v.currentTime)+' / '+fmt(v.duration)};
+    const toggle=()=>{if(v.paused||v.ended){pauseOthers(v);v.play().catch(()=>{})}else v.pause()};
+    bp.onclick=toggle;v.addEventListener('click',toggle);
+    ['play','pause','ended'].forEach(e=>v.addEventListener(e,sync));
+    ['timeupdate','loadedmetadata','durationchange'].forEach(e=>v.addEventListener(e,tick));
+    br.addEventListener('input',()=>{if(v.duration)v.currentTime=br.value/1000*v.duration});
+    bs.onclick=()=>{const r=v.playbackRate===1?1.5:v.playbackRate===1.5?0.5:1;v.playbackRate=r;bs.textContent=(r===0.5?'½':r)+'×'};
+    bf.onclick=()=>{(v.requestFullscreen||v.webkitRequestFullscreen||(()=>{})).call(v)};
+    tick();
+  });
+  if(reduce)return;
+  const vo=new IntersectionObserver(es=>es.forEach(e=>{const v=e.target;
+    if(e.isIntersecting&&e.intersectionRatio>=.6){if(v.dataset.auto==='1'&&v.paused&&!v.ended){pauseOthers(v);v.play().catch(()=>{})}}
+    else if(!v.paused){v.dataset.sys='1';v.pause();delete v.dataset.sys}
+  }),{threshold:[0,.6]});
+  films.forEach(v=>vo.observe(v));
+})();
+</script>

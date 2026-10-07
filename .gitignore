@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.DS_Store
+# render outputs if you try the examples in place
+videos/
+frames/
+media/
+.last-render.log
+.render-start
