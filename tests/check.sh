@@ -3,10 +3,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 fail=0
-for f in skills/visual-explain/manim/ve-manim skills/visual-explain/manim/install.sh scripts/ensure-manim.sh tests/*.sh; do
+for f in skills/visual-explain/manim/ve-manim skills/visual-explain/manim/install.sh skills/visual-explain/tools/ve-check scripts/ensure-manim.sh tests/*.sh; do
   bash -n "$f" || { echo "bash syntax: $f"; fail=1; }
 done
-for f in skills/visual-explain/manim/ve-manim skills/visual-explain/manim/install.sh scripts/ensure-manim.sh; do
+for f in skills/visual-explain/manim/ve-manim skills/visual-explain/manim/install.sh skills/visual-explain/tools/ve-check scripts/ensure-manim.sh; do
   [ -x "$f" ] || { echo "not executable: $f"; fail=1; }
 done
 # ast.parse instead of py_compile: checks syntax without leaving __pycache__ in the plugin
@@ -18,6 +18,9 @@ if command -v node >/dev/null; then
   python3 -c 'import re, sys; print(re.findall(r"^<script>(.*?)^</script>", open(sys.argv[1]).read(), re.S | re.M)[0])' \
     skills/visual-explain/manim/film-player.html >"${TMPDIR:-/tmp}/ve-film-player.js"
   node --check "${TMPDIR:-/tmp}/ve-film-player.js" || { echo "film-player.html script"; fail=1; }
+  python3 -c 'import re, sys; print(re.findall(r"<script>(.*?)</script>", open(sys.argv[1]).read(), re.S)[0])' \
+    skills/visual-explain/reference/kit.html >"${TMPDIR:-/tmp}/ve-kit.js"
+  node --check "${TMPDIR:-/tmp}/ve-kit.js" || { echo "kit.html script"; fail=1; }
 fi
 for j in .claude-plugin/plugin.json .claude-plugin/marketplace.json hooks/hooks.json; do
   python3 -m json.tool "$j" >/dev/null || { echo "bad JSON: $j"; fail=1; }

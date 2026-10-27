@@ -4,12 +4,14 @@ A Claude Code plugin that answers "explain X" with **one self-contained HTML pag
 diagrams and animations** instead of a wall of text. Optionally, it adds rendered
 explainer films made with [3b1b manim](https://github.com/3b1b/manim) (`manimgl`).
 
-| Piece                        | What it is                                                          |
-|------------------------------|---------------------------------------------------------------------|
-| `visual-explain` skill       | How to research, lay out, animate (SVG + JS) and verify the page    |
-| `manim/` toolkit             | `ve-manim` CLI, house-style scene template, film player, playbook   |
-| SessionStart hook            | Installs the manim renderer in the background, once                 |
-| Worked examples              | `reference/example-architecture.html`, `manim/examples/spotify-rap` |
+| Piece                  | What it is                                                             |
+|------------------------|------------------------------------------------------------------------|
+| `visual-explain` skill | How to research, lay out, animate (SVG + JS) and verify the page       |
+| `reference/kit.html`   | The visual language: CSS + JS kit and five worked figures (incl. BPMN) |
+| `tools/ve-check`       | Script syntax, kit layout report, light/dark/phone screenshots         |
+| `manim/` toolkit       | `ve-manim` CLI, house-style scene template, film player, playbook      |
+| SessionStart hook      | Installs the manim renderer in the background, once                    |
+| Worked examples        | `reference/kit.html`, `manim/examples/spotify-rap`                     |
 
 **Films are opt-in.** Claude makes manim films only when you ask for them ("…with manim
 films"). If it thinks films would help, it asks first, because they cost many more
@@ -93,7 +95,8 @@ Layout:
 .claude-plugin/marketplace.json   local marketplace (source "./")
 hooks/hooks.json                  SessionStart → scripts/ensure-manim.sh
 skills/visual-explain/SKILL.md    the skill
-skills/visual-explain/reference/  example page with the two animation engines
+skills/visual-explain/reference/  kit.html (visual language + figures), example-architecture.html
+skills/visual-explain/tools/      ve-check
 skills/visual-explain/manim/      MANIM.md playbook, ve-manim, install.sh, vetools.py,
                                   template/, film-player.html, examples/
 tests/                            check.sh, smoke.sh

@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Check a visual-explain page: inline scripts parse, the kit reports no layout errors, and
+# light / dark / phone screenshots exist to look at.
+# Usage: ve-check page.html [outdir]   (outdir defaults to <page dir>/ve-check)
+set -euo pipefail
+page="${1:?usage: ve-check page.html [outdir]}"
+[ -f "$page" ] || { echo "ve-check: no such file: $page" >&2; exit 2; }
+page="$(cd "$(dirname "$page")" && pwd)/$(basename "$page")"
+out="${2:-$(dirname "$page")/ve-check}"
+mkdir -p "$out"
+status=0
+
+# 1. every inline <script> (no src, JS type) must parse
+if command -v node >/dev/null; then
+  n=0
+  while IFS= read -r js; do
+    n=$((n + 1))
+    node --check "$js" || { echo "ve-check: script $n does not parse ($js)"; status=1; }
+  done < <(python3 -I - "$page" "$out" <<'PY'
+import re, sys
+src = open(sys.argv[1], encoding="utf-8").read()
+for i, m in enumerate(re.finditer(r"<script(?P<a>[^>]*)>(?P<b>.*?)</script>", src, re.S)):
+    a = m.group("a")
+    if "src=" in a or ("type=" in a and "javascript" not in a and "module" not in a):
+        continue
+    p = f"{sys.argv[2]}/script-{i}.js"
+    open(p, "w", encoding="utf-8").write(m.group("b"))
+    print(p)
+PY
+  )
+  echo "ve-check: $n inline script(s) checked"
+else
+  echo "ve-check: node not found, skipping script syntax check"
+fi
+
+# 2. headless Chrome: layout report + screenshots
+chrome=""
+for c in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+         "/Applications/Chromium.app/Contents/MacOS/Chromium" \
+         google-chrome google-chrome-stable chromium chromium-browser; do
+  if [ -x "$c" ] || command -v "$c" >/dev/null 2>&1; then chrome="$c"; break; fi
+done
+if [ -z "$chrome" ]; then
+  echo "ve-check: Chrome not found, skipping layout check and screenshots"
+  exit $status
+fi
+profile="$(mktemp -d "${TMPDIR:-/tmp}/ve-check-profile.XXXXXX")"
+trap 'rm -rf "$profile"' EXIT
+# headless Chrome can hang on heavy pages: kill it after 60 s
+run() {
+  "$chrome" --headless=new --disable-gpu --hide-scrollbars --no-first-run --no-default-browser-check \
+    --user-data-dir="$profile" --force-prefers-reduced-motion "$@" >/dev/null 2>"$out/chrome.log" &
+  local pid=$!
+  ( sleep 60; kill "$pid" 2>/dev/null ) &
+  local watchdog=$!
+  wait "$pid" 2>/dev/null || true
+  kill "$watchdog" 2>/dev/null || true
+}
+url="file://$page"
+"$chrome" --headless=new --disable-gpu --no-first-run --user-data-dir="$profile" --force-prefers-reduced-motion \
+  --window-size=1400,1000 --virtual-time-budget=4000 --dump-dom "$url" >"$out/dom.html" 2>"$out/chrome.log" &
+pid=$!; ( sleep 60; kill "$pid" 2>/dev/null ) & wd=$!; wait "$pid" 2>/dev/null || true; kill "$wd" 2>/dev/null || true
+
+if grep -q 'data-ve-errors=' "$out/dom.html"; then
+  python3 -I - "$out/dom.html" <<'PY' || status=1
+import html, json, re, sys
+dom = open(sys.argv[1], encoding="utf-8").read()
+n = int(re.search(r'data-ve-errors="(\d+)"', dom).group(1))
+m = re.search(r"data-ve-report=\"([^\"]*)\"", dom)
+items = json.loads(html.unescape(m.group(1))) if m else []
+if n:
+    print(f"ve-check: {n} kit error(s):")
+    for it in items:
+        print("  - " + it)
+    sys.exit(1)
+print("ve-check: kit reports 0 errors")
+PY
+else
+  echo "ve-check: page does not use the kit JS (no data-ve-errors), skipping layout report"
+fi
+
+sep='?'; case "$url" in *\?*) sep='&';; esac
+run --window-size=1400,4000 --virtual-time-budget=3000 --screenshot="$out/light.png" "$url${sep}theme=light"
+run --window-size=1400,4000 --virtual-time-budget=3000 --screenshot="$out/dark.png" "$url${sep}theme=dark"
+run --window-size=390,3000 --virtual-time-budget=3000 --screenshot="$out/phone.png" "$url${sep}theme=light"
+for s in light dark phone; do
+  [ -s "$out/$s.png" ] && echo "ve-check: screenshot $out/$s.png" || { echo "ve-check: no $s screenshot (see $out/chrome.log)"; status=1; }
+done
+[ $status = 0 ] && echo "ve-check: OK" || echo "ve-check: FAILED"
+exit $status
